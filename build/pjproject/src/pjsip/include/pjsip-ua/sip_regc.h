@@ -205,7 +205,8 @@ PJ_DECL(pj_status_t) pjsip_regc_init(pjsip_regc *regc,
 				     const pj_str_t *to_url,
 				     int ccnt,
 				     const pj_str_t contact[],
-				     pj_uint32_t expires);
+				     pj_uint32_t expires,
+                     const pj_str_t cid);
 
 /**
  * Set callback to be called when the registration received a final response.
