@@ -7,11 +7,11 @@ __DIR__=`dirname "${__FILE__}"`
 
 # download
 function download() {
-    "${__DIR__}/download.sh" "$1" "$2" #--no-cache
+   "${__DIR__}/download.sh" "$1" "$2" #--no-cache
 }
 
 BASE_DIR="$1"
-PJSIP_URL="http://www.pjsip.org/release/2.7.1/pjproject-2.7.1.tar.bz2"
+PJSIP_URL="http://www.pjsip.org/release/2.8/pjproject-2.8.tar.bz2"
 PJSIP_DIR="$1/src"
 LIB_PATHS=("pjlib/lib" \
            "pjlib-util/lib" \
@@ -85,6 +85,14 @@ function config_site() {
         echo "#include <OpenGLES/ES3/glext.h>" >> "${PJSIP_CONFIG_PATH}"
     fi
     echo "#include <pj/config_site_sample.h>" >> "${PJSIP_CONFIG_PATH}"
+}
+function patch_pjsip() {
+    SRC_DIR=$1;
+    ROOT_DIR=$2;
+    cd "${SRC_DIR}";
+    patch -s -p0 < "${ROOT_DIR}/patch-pjsip.patch";
+    cd "${ROOT_DIR}";
+    echo "Patch done.";
 }
 
 function clean_libs () {
@@ -167,19 +175,19 @@ function _build() {
 
 function armv7() {
     export DEVPATH="`xcrun -sdk iphoneos --show-sdk-platform-path`/Developer"
-    export CFLAGS="-miphoneos-version-min=8.0"
+    export CFLAGS="-miphoneos-version-min=10.0"
     export LDFLAGS=
     _build "armv7"
 }
 function armv7s() {
     export DEVPATH="`xcrun -sdk iphoneos --show-sdk-platform-path`/Developer"
-    export CFLAGS="-miphoneos-version-min=8.0"
+    export CFLAGS="-miphoneos-version-min=10.0"
     export LDFLAGS=
     _build "armv7s"
 }
 function arm64() {
     export DEVPATH="`xcrun -sdk iphoneos --show-sdk-platform-path`/Developer"
-    export CFLAGS="-miphoneos-version-min=8.0"
+    export CFLAGS="-miphoneos-version-min=10.0"
     export LDFLAGS=
     _build "arm64"
 }
@@ -191,8 +199,8 @@ function i386() {
 }
 function x86_64() {
     export DEVPATH="`xcrun -sdk iphonesimulator --show-sdk-platform-path`/Developer"
-    export CFLAGS="-O2 -m32 -mios-simulator-version-min=8.0"
-    export LDFLAGS="-O2 -m32 -mios-simulator-version-min=8.0"
+    export CFLAGS="-O2 -m32 -mios-simulator-version-min=10.0"
+    export LDFLAGS="-O2 -m32 -mios-simulator-version-min=10.0"
     _build "x86_64"
 }
 
@@ -232,6 +240,7 @@ function lipo() {
 }
 
 download "${PJSIP_URL}" "${PJSIP_DIR}"
+patch_pjsip "${PJSIP_DIR}" "${__DIR__}"
 config_site "${PJSIP_DIR}"
 armv7 && armv7s && arm64 && i386 && x86_64
 lipo armv7 armv7s arm64 i386 x86_64

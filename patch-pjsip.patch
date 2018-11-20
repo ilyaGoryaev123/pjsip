@@ -1,0 +1,75 @@
+diff -ruN ../pjproject-2.8/pjsip/include/pjsip-ua/sip_regc.h ./pjsip/include/pjsip-ua/sip_regc.h
+--- ../pjproject-2.8/pjsip/include/pjsip-ua/sip_regc.h	2016-06-24 15:03:25.000000000 +0200
++++ ./pjsip/include/pjsip-ua/sip_regc.h	2018-11-19 17:29:23.000000000 +0100
+@@ -205,7 +205,8 @@
+ 				     const pj_str_t *to_url,
+ 				     int ccnt,
+ 				     const pj_str_t contact[],
+-				     pj_uint32_t expires);
++				     pj_uint32_t expires,
++                     const pj_str_t cid);
+ 
+ /**
+  * Set callback to be called when the registration received a final response.
+diff -ruN ../pjproject-2.8/pjsip/include/pjsua-lib/pjsua.h ./pjsip/include/pjsua-lib/pjsua.h
+--- ../pjproject-2.8/pjsip/include/pjsua-lib/pjsua.h	2018-09-03 09:13:40.000000000 +0200
++++ ./pjsip/include/pjsua-lib/pjsua.h	2018-11-20 10:11:29.000000000 +0100
+@@ -3414,6 +3414,14 @@
+     pj_str_t	    id;
+ 
+     /** 
++     * The Call ID used in REGISTER. If the value is empty, a random generated
++     * value will be used.
++     *
++     * This field is optional.
++     */
++    pj_str_t	    call_id;
++
++    /** 
+      * This is the URL to be put in the request URI for the registration,
+      * and will look something like "sip:serviceprovider".
+      *
+diff -ruN ../pjproject-2.8/pjsip/src/pjsip-ua/sip_reg.c ./pjsip/src/pjsip-ua/sip_reg.c
+--- ../pjproject-2.8/pjsip/src/pjsip-ua/sip_reg.c	2016-06-30 10:23:08.000000000 +0200
++++ ./pjsip/src/pjsip-ua/sip_reg.c	2018-11-20 12:17:33.000000000 +0100
+@@ -334,7 +334,8 @@
+ 				     const pj_str_t *to_url,
+ 				     int contact_cnt,
+ 				     const pj_str_t contact[],
+-				     pj_uint32_t expires)
++				     pj_uint32_t expires,
++                     const pj_str_t cid)
+ {
+     pj_str_t tmp;
+     pj_status_t status;
+@@ -386,8 +387,12 @@
+ 
+     /* Set "Call-ID" header. */
+     regc->cid_hdr = pjsip_cid_hdr_create(regc->pool);
+-    pj_create_unique_string(regc->pool, &regc->cid_hdr->id);
+-
++    if (cid.slen > 0){
++        regc->cid_hdr->id = cid;
++	    PJ_LOG(4,(THIS_FILE, "regc: callID %.*s", regc->cid_hdr->id.slen, regc->cid_hdr->id.ptr));
++    }else {
++        pj_create_unique_string(regc->pool, &regc->cid_hdr->id);
++    }
+     /* Set "CSeq" header. */
+     regc->cseq_hdr = pjsip_cseq_hdr_create(regc->pool);
+     regc->cseq_hdr->cseq = pj_rand() % 0xFFFF;
+diff -ruN ../pjproject-2.8/pjsip/src/pjsua-lib/pjsua_acc.c ./pjsip/src/pjsua-lib/pjsua_acc.c
+--- ../pjproject-2.8/pjsip/src/pjsua-lib/pjsua_acc.c	2018-09-03 09:13:40.000000000 +0200
++++ ./pjsip/src/pjsua-lib/pjsua_acc.c	2018-11-19 17:29:13.000000000 +0100
+@@ -2496,7 +2496,11 @@
+ 			      &acc->cfg.id, 
+ 			      &acc->cfg.id,
+ 			      1, &acc->reg_contact,
+-			      acc->cfg.reg_timeout);
++			      acc->cfg.reg_timeout,
++				  acc->cfg.call_id);
++	// if (acc->cfg.call_id.slen > 0){
++	// 	acc->regc->cid_hdr->id = acc->cfg.call_id;
++	// }
+     if (status != PJ_SUCCESS) {
+ 	pjsua_perror(THIS_FILE, 
+ 		     "Client registration initialization error", 
