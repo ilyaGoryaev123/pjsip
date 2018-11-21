@@ -1,4 +1,4 @@
-/* $Id: presence.hpp 5672 2017-10-06 08:14:31Z riza $ */
+/* $Id: presence.hpp 4704 2014-01-16 05:30:46Z ming $ */
 /*
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
@@ -176,18 +176,6 @@ public:
 
 
 /**
- * This structure contains parameters for Buddy::onBuddyEvSubState() callback.
- */
-struct OnBuddyEvSubStateParam
-{
-    /**
-     * * The event which triggers state change event.
-     */
-    SipEvent    e;
-};
-
-
-/**
  * Buddy.
  */
 class Buddy
@@ -281,17 +269,6 @@ public:
      */
     virtual void onBuddyState()
     {}
-
-    /**
-     * Notify application when the state of client subscription session
-     * associated with a buddy has changed. Application may use this
-     * callback to retrieve more detailed information about the state
-     * changed event.
-     *
-     * @param prm	Callback parameter.
-     */
-    virtual void onBuddyEvSubState(OnBuddyEvSubStateParam &prm)
-    { PJ_UNUSED_ARG(prm); }
      
 private:
      /**

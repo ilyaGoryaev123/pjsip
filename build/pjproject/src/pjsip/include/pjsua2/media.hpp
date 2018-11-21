@@ -1,4 +1,4 @@
-/* $Id: media.hpp 5792 2018-05-15 08:23:44Z ming $ */
+/* $Id: media.hpp 5273 2016-04-04 01:44:10Z riza $ */
 /*
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
@@ -108,7 +108,7 @@ struct MediaFormatVideo : public MediaFormat
 };
 
 /** Array of MediaFormat */
-typedef std::vector<MediaFormat> MediaFormatVector;
+typedef std::vector<MediaFormat*> MediaFormatVector;
 
 /**
  * This structure descibes information about a particular media port that
@@ -192,23 +192,6 @@ private:
     pjmedia_type        type;
 };
 
-struct AudioMediaTransmitParam
-{
-    /**
-     * Signal level adjustment. Value 1.0 means no level adjustment,
-     * while value 0 means to mute the port.
-     *
-     * Default: 1.0
-     */
-    float		level;
-
-public:
-    /**
-     * Default constructor
-     */
-    AudioMediaTransmitParam();
-};
-
 /**
  * Audio Media.
  */
@@ -244,35 +227,6 @@ public:
      * @param sink		The destination Media.
      */
     void startTransmit(const AudioMedia &sink) const throw(Error);
-
-    /**
-     * Establish unidirectional media flow to sink. This media port
-     * will act as a source, and it may transmit to multiple destinations/sink.
-     * And if multiple sources are transmitting to the same sink, the media
-     * will be mixed together. Source and sink may refer to the same Media,
-     * effectively looping the media.
-     *
-     * Signal level from this source to the sink can be adjusted by making
-     * it louder or quieter via the parameter param. The level adjustment
-     * will apply to a specific connection only (i.e. only for signal
-     * from this source to the sink), as compared to
-     * adjustTxLevel()/adjustRxLevel() which applies to all signals from/to
-     * this media port. The signal adjustment
-     * will be cumulative, in this following order:
-     * signal from this source will be adjusted with the level specified
-     * in adjustTxLevel(), then with the level specified via this API,
-     * and finally with the level specified to the sink's adjustRxLevel().
-     *
-     * If bidirectional media flow is desired, application needs to call
-     * this method twice, with the second one called from the opposite source
-     * media.
-     *
-     * @param sink		The destination Media.
-     * @param param		The parameter.
-     */
-    void startTransmit2(const AudioMedia &sink, 
-			const AudioMediaTransmitParam &param) const
-         throw(Error);
 
     /**
      *  Stop media flow to destination/sink port.
@@ -1395,57 +1349,6 @@ private:
 };
 
 
-/**
- * Extra audio device. This class allows application to have multiple
- * sound device instances active concurrently. Application may also use
- * this class to improve media clock. Normally media clock is driven by
- * sound device in master port, but unfortunately some sound devices may
- * produce jittery clock. To improve media clock, application can install
- * Null Sound Device (i.e: using AudDevManager::setNullDev()), which will
- * act as a master port, and install the sound device as extra sound device.
- * Note that extra sound device will not have auto-close upon idle feature.
- */
-class ExtraAudioDevice : public AudioMedia
-{
-public:
-    /**
-     * Constructor
-     *
-     * @param playdev		Playback device ID.
-     * @param recdev		Record device ID.
-     */
-    ExtraAudioDevice(int playdev, int recdev);
-
-    /**
-     * Destructor
-     */
-    virtual ~ExtraAudioDevice();
-
-    /**
-     * Open the audio device using format (e.g.: clock rate, channel count,
-     * samples per frame) matched to the conference bridge's format.
-     */
-    void open();
-
-    /**
-     * Close the audio device.
-     */
-    void close();
-
-    /**
-     * Is the extra audio device opened?
-     *
-     * @return	    		'true' if it is opened.
-     */
-    bool isOpened();
-
-protected:
-    int playDev;
-    int recDev;
-    void *ext_snd_dev;
-};
-
-
 /*************************************************************************
 * Video media
 */
@@ -2051,6 +1954,11 @@ struct CodecInfo
 typedef std::vector<CodecInfo*> CodecInfoVector;
 
 /**
+ * Codec parameters, corresponds to pjmedia_codec_param.
+ */
+typedef void *CodecParam;
+
+/**
  * Structure of codec specific parameters which contains name=value pairs.
  * The codec specific parameters are to be used with SDP according to
  * the standards (e.g: RFC 3555) in SDP 'a=fmtp' attribute.
@@ -2065,60 +1973,8 @@ typedef struct CodecFmtp
 typedef std::vector<CodecFmtp> CodecFmtpVector;
 
 /**
- * Audio codec parameters info.
- */
-struct CodecParamInfo
-{
-    unsigned	clockRate;		/**< Sampling rate in Hz	    */
-    unsigned	channelCnt;		/**< Channel count.		    */
-    unsigned 	avgBps;			/**< Average bandwidth in bits/sec  */
-    unsigned	maxBps;			/**< Maximum bandwidth in bits/sec  */
-    unsigned    maxRxFrameSize;		/**< Maximum frame size             */
-    unsigned 	frameLen;		/**< Decoder frame ptime in msec.   */
-    unsigned  	pcmBitsPerSample;	/**< Bits/sample in the PCM side    */
-    unsigned  	pt;			/**< Payload type.		    */
-    pjmedia_format_id fmtId;		/**< Source format, it's format of
-					     encoder input and decoder
-					     output.			    */
-};
-
-/**
- * Audio codec parameters setting.
- */
-struct CodecParamSetting
-{
-    unsigned  	frmPerPkt;	    /**< Number of frames per packet.	*/
-    bool	vad;		    /**< Voice Activity Detector.	*/
-    bool	cng;		    /**< Comfort Noise Generator.	*/
-    bool	penh;		    /**< Perceptual Enhancement		*/
-    bool	plc;		    /**< Packet loss concealment	*/
-    bool	reserved;	    /**< Reserved, must be zero.	*/
-    CodecFmtpVector encFmtp;	    /**< Encoder's fmtp params.		*/
-    CodecFmtpVector decFmtp;	    /**< Decoder's fmtp params.		*/
-};
-
-/**
- * Detailed codec attributes used in configuring an audio codec and in querying
- * the capability of audio codec factories.
- *
- * Please note that codec parameter also contains SDP specific setting,
- * #setting::decFmtp and #setting::encFmtp, which may need to be set 
- * appropriately based on the effective setting. 
- * See each codec documentation for more detail.
- */
-struct CodecParam
-{
-    struct CodecParamInfo info;
-    struct CodecParamSetting setting;
-
-    void fromPj(const pjmedia_codec_param &param);
-
-    pjmedia_codec_param toPj() const;
-};
-
-/**
- * Detailed codec attributes used in configuring a video codec and in querying
- * the capability of video codec factories. 
+ * Detailed codec attributes used in configuring a codec and in querying
+ * the capability of codec factories. 
  *
  * Please note that codec parameter also contains SDP specific setting,
  * #decFmtp and #encFmtp, which may need to be set appropriately based on
@@ -2146,6 +2002,14 @@ struct VidCodecParam
     void fromPj(const pjmedia_vid_codec_param &param);
 
     pjmedia_vid_codec_param toPj() const;
+
+private:
+    void setCodecFmtp(const pjmedia_codec_fmtp &in_fmtp, 
+		      CodecFmtpVector &out_fmtp);
+
+    void getCodecFmtp(const CodecFmtpVector &in_fmtp,
+		      pjmedia_codec_fmtp &out_fmtp) const;
+
 };
 
 
