@@ -11,7 +11,8 @@ function download() {
 }
 
 BASE_DIR="$1"
-PJSIP_URL="http://www.pjsip.org/release/2.6/pjproject-2.6.tar.bz2"
+PJSIP_VERSION="2.6"
+PJSIP_URL="http://www.pjsip.org/release/${PJSIP_VERSION}/pjproject-${PJSIP_VERSION}.tar.bz2"
 PJSIP_DIR="$1/src"
 LIB_PATHS=("pjlib/lib" \
            "pjlib-util/lib" \
@@ -23,6 +24,7 @@ LIB_PATHS=("pjlib/lib" \
 OPENSSL_PREFIX=
 OPENH264_PREFIX=
 OPUS_PREFIX=
+G729_PREFIX=
 while [ "$#" -gt 0 ]; do
     case $1 in
         --with-openssl)
@@ -55,10 +57,30 @@ while [ "$#" -gt 0 ]; do
                 exit 1
             fi
             ;;
+        # --with-bcg729)
+        #     if [ "$#" -gt 1 ]; then
+        #         G729_PREFIX=$(python -c "import os,sys; print os.path.realpath(sys.argv[1])" "$2")
+        #         shift 2
+        #         continue
+        #     else
+        #         echo 'ERROR: Must specify a non-empty "--with-opus PREFIX" argument.' >&2
+        #         exit 1
+        #     fi
+        #     ;;
+        --enable-g729-codec)
+            G729_ENABLED=1
+            shift 1
+            continue
+        ;;
     esac
 
     shift
 done
+
+G729_DIR="${__DIR__}/support_g729"
+function g729() {
+    "${G729_DIR}/install.sh" "$1" "$2"
+}
 
 function config_site() {
     SOURCE_DIR=$1
@@ -73,6 +95,7 @@ function config_site() {
 
     echo "#define PJ_CONFIG_IPHONE 1" >> "${PJSIP_CONFIG_PATH}"
     echo "#define PJ_HAS_IPV6 1" >> "${PJSIP_CONFIG_PATH}" # Enable IPV6
+    # echo "#define PJMEDIA_HAS_G7221_CODEC 1" >> "${PJSIP_CONFIG_PATH}"
     if [[ ${OPENH264_PREFIX} ]]; then
         echo "#define PJMEDIA_HAS_OPENH264_CODEC 1" >> "${PJSIP_CONFIG_PATH}"
         HAS_VIDEO=1
@@ -84,6 +107,10 @@ function config_site() {
         echo "#define PJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL 1" >> "${PJSIP_CONFIG_PATH}"
         echo "#include <OpenGLES/ES3/glext.h>" >> "${PJSIP_CONFIG_PATH}"
     fi
+    if [[ ${G729_ENABLED} ]]; then
+        echo "#define PJMEDIA_HAS_G729_CODEC 1" >> "${PJSIP_CONFIG_PATH}"
+    fi
+
     echo "#include <pj/config_site_sample.h>" >> "${PJSIP_CONFIG_PATH}"
 }
 function patch_pjsip() {
@@ -142,7 +169,10 @@ function _build() {
     if [[ ${OPUS_PREFIX} ]]; then
         CONFIGURE="${CONFIGURE} --with-opus=${OPUS_PREFIX}"
     fi
-
+    if [[ ${G729_ENABLED} ]]; then
+        CONFIGURE="${CONFIGURE} --enable-g729-codec"
+    fi
+    echo $CONFIGURE
     # flags
     if [[ ! ${CFLAGS} ]]; then
         export CFLAGS=
@@ -157,6 +187,10 @@ function _build() {
     if [[ ${OPENH264_PREFIX} ]]; then
         export CFLAGS="${CFLAGS} -I${OPENH264_PREFIX}/include"
         export LDFLAGS="${LDFLAGS} -L${OPENH264_PREFIX}/lib"
+    fi
+    if [[ ${G729_PREFIX} ]]; then
+        export CFLAGS="${CFLAGS} -I${G729_PREFIX}/include"
+        export LDFLAGS="${LDFLAGS} -L${G729_PREFIX}/lib"
     fi
     export LDFLAGS="${LDFLAGS} -lstdc++"
 
@@ -240,7 +274,12 @@ function lipo() {
 }
 
 download "${PJSIP_URL}" "${PJSIP_DIR}"
+
+if [[ G729_ENABLED ]]; then
+    g729 "${PJSIP_DIR}" "${PJSIP_VERSION}"
+fi
+
 patch_pjsip "${PJSIP_DIR}" "${__DIR__}"
 config_site "${PJSIP_DIR}"
-armv7 && armv7s && arm64 && i386 && x86_64
+arm64 && armv7s && armv7 && i386 && x86_64
 lipo armv7 armv7s arm64 i386 x86_64

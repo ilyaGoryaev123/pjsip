@@ -33,6 +33,7 @@
 #include <pjmedia-codec/ilbc.h>
 #include <pjmedia-codec/g722.h>
 #include <pjmedia-codec/g7221.h>
+#include <pjmedia-codec/g729.h>
 #include <pjmedia-codec/ipp_codecs.h>
 #include <pjmedia-codec/opencore_amr.h>
 #include <pjmedia-codec/openh264.h>

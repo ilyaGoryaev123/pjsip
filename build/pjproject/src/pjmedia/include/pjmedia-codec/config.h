@@ -96,6 +96,12 @@
 #   define PJMEDIA_HAS_G722_CODEC    1
 #endif
 
+/**
+* Unless specified otherwise, G.729 codec is not included by default.
+*/
+#ifndef PJMEDIA_HAS_G729_CODEC
+#   define PJMEDIA_HAS_G729_CODEC    0
+#endif
 
 /**
  * Default G.722 codec encoder and decoder level adjustment. The G.722

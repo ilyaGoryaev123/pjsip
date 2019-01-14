@@ -6,4 +6,5 @@
 #define PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES 1
 #define PJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL 1
 #include <OpenGLES/ES3/glext.h>
+#define PJMEDIA_HAS_G729_CODEC 1
 #include <pj/config_site_sample.h>

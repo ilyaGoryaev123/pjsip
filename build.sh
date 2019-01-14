@@ -53,6 +53,23 @@ function openh264() {
     OPENH264_ENABLED=1
 }
 
+# G729_DIR="${BUILD_DIR}/bcg729"
+# G729_ENABLED=
+# function g729() {
+#     # if [ ! -f "${OPENH264_DIR}/lib/libopenh264.a" ] || [ ! -d "${OPENH264_DIR}/include/wels/" ]; then
+#         "${__DIR__}/g729.sh" "${G729_DIR}"
+#     # else
+#     #     echo "Using OpenH264..."
+#     # fi
+
+#     G729_ENABLED=1
+# }
+
+G729_ENABLED=
+function enable_g729() {
+    G729_ENABLED=1
+}
+
 # opus
 OPUS_DIR="${BUILD_DIR}/opus"
 OPUS_ENABLED=
@@ -68,10 +85,28 @@ function opus() {
 
 PJSIP_DIR="${BUILD_DIR}/pjproject"
 function pjsip() {
-    "${__DIR__}/pjsip.sh" "${PJSIP_DIR}" --with-openssl "${OPENSSL_DIR}" --with-openh264 "${OPENH264_DIR}" --with-opus "${OPUS_DIR}/dependencies"
+    ARGS=
+    if [[ OPENH264_ENABLED ]]; then
+        ARGS+=("--with-openh264" "${OPENH264_DIR}")
+    fi
+    if [[ OPENSSL_ENABLED ]]; then
+        ARGS+=("--with-openssl" "${OPENSSL_DIR}")
+    fi
+    if [[ OPUS_ENABLED ]]; then
+        ARGS+=("--with-opus" "${OPUS_DIR}/dependencies")
+    fi
+    if [[ G729_ENABLED ]]; then
+        ARGS+=("--enable-g729-codec")
+    fi
+    echo "${ARGS[@]}"
+
+    "${__DIR__}/pjsip.sh" "${PJSIP_DIR}" "${ARGS[@]}"
+    # "${__DIR__}/pjsip.sh" "${PJSIP_DIR}" --with-openssl "${OPENSSL_DIR}" --with-openh264 "${OPENH264_DIR}" --with-opus "${OPUS_DIR}/dependencies" --enable-g729-codec
 }
 
 openssl
 openh264
 opus
+# g729
+enable_g729
 pjsip

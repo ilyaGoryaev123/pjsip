@@ -70,6 +70,11 @@
 /* #undef PJMEDIA_HAS_G7221_CODEC */
 #endif
 
+/* G729 codec */
+#ifndef PJMEDIA_HAS_G729_CODEC
+#define PJMEDIA_HAS_G729_CODEC 1
+#endif
+
 /* OpenCORE AMR-NB codec */
 #ifndef PJMEDIA_HAS_OPENCORE_AMRNB_CODEC
 #define PJMEDIA_HAS_OPENCORE_AMRNB_CODEC 0
