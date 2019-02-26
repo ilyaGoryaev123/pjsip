@@ -7,7 +7,7 @@ diff -ruN pjproject/pjsip/include/pjsip-ua/sip_regc.h ./pjsip/include/pjsip-ua/s
  				     const pj_str_t contact[],
 -				     pj_uint32_t expires);
 +				     pj_uint32_t expires,
-+                     const pj_str_t cid);
++                     const pj_str_t *cid);
  
  /**
   * Set callback to be called when the registration received a final response.
@@ -38,7 +38,7 @@ diff -ruN pjproject/pjsip/src/pjsip-ua/sip_reg.c ./pjsip/src/pjsip-ua/sip_reg.c
  				     const pj_str_t contact[],
 -				     pj_uint32_t expires)
 +				     pj_uint32_t expires,
-+                     const pj_str_t cid)
++                     const pj_str_t *cid)
  {
      pj_str_t tmp;
      pj_status_t status;
@@ -48,8 +48,8 @@ diff -ruN pjproject/pjsip/src/pjsip-ua/sip_reg.c ./pjsip/src/pjsip-ua/sip_reg.c
      regc->cid_hdr = pjsip_cid_hdr_create(regc->pool);
 -    pj_create_unique_string(regc->pool, &regc->cid_hdr->id);
 -
-+    if (cid.ptr != NULL){
-+        regc->cid_hdr->id = cid;
++    if (cid->slen > 0){
++        pj_strdup_with_null(regc->pool, &regc->cid_hdr->id, cid);
 +	    PJ_LOG(4,(THIS_FILE, "regc: callID %.*s", regc->cid_hdr->id.slen, regc->cid_hdr->id.ptr));
 +    }else {
 +        pj_create_unique_string(regc->pool, &regc->cid_hdr->id);
@@ -68,13 +68,22 @@ diff -ruN pjproject/pjsip/src/pjsua-lib/pjsua_acc.c ./pjsip/src/pjsua-lib/pjsua_
  
      dst->proxy_cnt = src->proxy_cnt;
      for (i=0; i<src->proxy_cnt; ++i)
+@@ -430,7 +431,7 @@
+     if (acc->pool)
+ 	pj_pool_reset(acc->pool);
+     else
+-	acc->pool = pjsua_pool_create("acc%p", 512, 256);
++	acc->pool = pjsua_pool_create("acc%p", 1024, 256);
+
+     /* Copy config */
+     pjsua_acc_config_dup(acc->pool, &pjsua_var.acc[id].cfg, cfg);
 @@ -2399,7 +2400,9 @@
  			      &acc->cfg.id, 
  			      &acc->cfg.id,
  			      1, &acc->reg_contact,
 -			      acc->cfg.reg_timeout);
 +			      acc->cfg.reg_timeout,
-+				  acc->cfg.call_id);
++				  &acc->cfg.call_id);
 +
      if (status != PJ_SUCCESS) {
  	pjsua_perror(THIS_FILE, 
@@ -88,7 +97,7 @@ diff -ruN pjproject/pjsip/src/pjsua-lib/pjsua_core.c ./pjsip/src/pjsua-lib/pjsua
  
      pj_bzero(cfg, sizeof(*cfg));
 -
-+	cfg->call_id.ptr = NULL;
++	cfg->call_id = pj_str("");
      cfg->reg_timeout = PJSUA_REG_INTERVAL;
      cfg->reg_delay_before_refresh = PJSIP_REGISTER_CLIENT_DELAY_BEFORE_REFRESH;
      cfg->unreg_timeout = PJSUA_UNREG_TIMEOUT;
