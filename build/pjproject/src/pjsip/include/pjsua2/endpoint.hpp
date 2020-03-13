@@ -1,4 +1,4 @@
-/* $Id: endpoint.hpp 5522 2017-01-11 11:13:57Z ming $ */
+/* $Id$ */
 /* 
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
@@ -130,7 +130,17 @@ struct SslCertName
 {
     pj_ssl_cert_name_type  type;    	    /**< Name type		*/
     string		   name;    	    /**< The name		*/
+
+public:
+    /**
+     * Default constructor
+     */
+    SslCertName() : type(PJ_SSL_CERT_NAME_UNKNOWN)
+    {}
 };
+
+/** Array of SSL certificate type and name. */
+typedef std::vector<SslCertName> SslCertNameVector;
 
 /**
  * SSL certificate information.
@@ -155,7 +165,7 @@ struct SslCertInfo
     bool		validityGmt;	    /**< Flag if validity 
 					 	 date/time use GMT	*/
 
-    vector<SslCertName> subjectAltName;     /**< Subject alternative
+    SslCertNameVector	subjectAltName;     /**< Subject alternative
 					 	 name extension		*/
 
     string 		raw;		    /**< Raw certificate in PEM
@@ -319,6 +329,114 @@ struct OnSelectAccountParam
     int			accountIndex;
 };
 
+/**
+ * Parameter of Endpoint::handleIpChange().
+ */
+struct IpChangeParam {
+    /**
+     * If set to PJ_TRUE, this will restart the transport listener.
+     * 
+     * Default : PJ_TRUE
+     */
+    bool	    restartListener;
+
+    /** 
+     * If \a restartListener is set to PJ_TRUE, some delay might be needed 
+     * for the listener to be restarted. Use this to set the delay.
+     * 
+     * Default : PJSUA_TRANSPORT_RESTART_DELAY_TIME
+     */
+    unsigned	    restartLisDelay;
+
+public:
+    /**
+     * Constructor.
+     */
+    IpChangeParam();
+
+    /**
+     * Export to pjsua_ip_change_param.
+     */
+    pjsua_ip_change_param toPj() const;
+
+    /**
+     * Convert from pjsip
+     */
+    void fromPj(const pjsua_ip_change_param &param);
+};
+
+/**
+ * Information of Update contact on IP change progress.
+ */
+struct RegProgressParam
+{
+    /**
+     * Indicate if this is a Register or Un-Register message.
+     */
+    bool    isRegister;
+
+    /**
+     * SIP status code received.
+     */
+    int	    code;
+};
+
+/**
+ * Parameter of Endpoint::onIpChangeProgress().
+ */
+struct OnIpChangeProgressParam
+{
+    /**
+     * The IP change progress operation.
+     */
+    pjsua_ip_change_op	op;
+
+    /**
+     * The operation progress status.
+     */
+    pj_status_t		status;
+
+    /**
+     * Information of the transport id. This is only available when the 
+     * operation is PJSUA_IP_CHANGE_OP_RESTART_LIS.
+     */
+    TransportId		transportId;
+
+    /**
+     * Information of the account id. This is only available when the 
+     * operation is:
+     * - PJSUA_IP_CHANGE_OP_ACC_SHUTDOWN_TP 
+     * - PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT 
+     * - PJSUA_IP_CHANGE_OP_ACC_HANGUP_CALLS
+     * - PJSUA_IP_CHANGE_OP_ACC_REINVITE_CALLS
+     */
+    int			accId;
+
+    /**
+     * Information of the call id. This is only available when the operation is
+     * PJSUA_IP_CHANGE_OP_ACC_HANGUP_CALLS or 
+     * PJSUA_IP_CHANGE_OP_ACC_REINVITE_CALLS
+     */
+    int			callId;
+
+    /**
+     * Registration information. This is only available when the operation is
+     * PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT
+     */
+    RegProgressParam	regInfo;
+};
+
+/**
+ * Parameter of Endpoint::onCallMediaEvent() callback.
+ */
+struct OnMediaEventParam
+{
+    /**
+     * The media event.
+     */
+    MediaEvent      ev;
+};
+
 //////////////////////////////////////////////////////////////////////////////
 /**
  * SIP User Agent related settings.
@@ -363,6 +481,15 @@ struct UaConfig : public PersistentObject
     StringVector	nameserver;
 
     /**
+     * Specify the URL of outbound proxies to visit for all outgoing requests.
+     * The outbound proxies will be used for all accounts, and it will
+     * be used to build the route set for outgoing requests. The final
+     * route set for outgoing requests will consists of the outbound proxies
+     * and the proxy configured in the account.
+     */
+    StringVector	outboundProxies;
+
+    /**
      * Optional user agent string (default empty). If it's empty, no
      * User-Agent header will be sent with outgoing requests.
      */
@@ -389,6 +516,15 @@ struct UaConfig : public PersistentObject
      * specified if the server is not listening in standard STUN port.
      */
     StringVector	stunServer;
+
+    /**
+     * This specifies if the library should try to do an IPv6 resolution of
+     * the STUN servers if the IPv4 resolution fails. It can be useful
+     * in an IPv6-only environment, including on NAT64.
+     *
+     * Default: FALSE
+     */
+    bool	    	stunTryIpv6;
 
     /**
      * This specifies if the library startup should ignore failure with the
@@ -445,14 +581,14 @@ public:
      *
      * @param node		Container to write values from.
      */
-    virtual void readObject(const ContainerNode &node) throw(Error);
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const throw(Error);
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 
 };
 
@@ -545,14 +681,14 @@ public:
      *
      * @param node		Container to write values from.
      */
-    virtual void readObject(const ContainerNode &node) throw(Error);
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const throw(Error);
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
 
 
@@ -671,7 +807,9 @@ public:
     unsigned		rxDropPct;
 
     /**
-     * Echo canceller options (see pjmedia_echo_create())
+     * Echo canceller options (see pjmedia_echo_create()).
+     * Specify PJMEDIA_ECHO_USE_SW_ECHO here if application wishes
+     * to use software echo canceller instead of device EC.
      *
      * Default: 0.
      */
@@ -764,14 +902,14 @@ public:
      *
      * @param node		Container to write values from.
      */
-    virtual void readObject(const ContainerNode &node) throw(Error);
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const throw(Error);
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
 
 
@@ -794,14 +932,14 @@ struct EpConfig : public PersistentObject
      *
      * @param node		Container to write values from.
      */
-    virtual void readObject(const ContainerNode &node) throw(Error);
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const throw(Error);
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 
 };
 
@@ -826,7 +964,7 @@ class Endpoint
 {
 public:
     /** Retrieve the singleton instance of the endpoint */
-    static Endpoint &instance() throw(Error);
+    static Endpoint &instance() PJSUA2_THROW(Error);
 
     /** Default constructor */
     Endpoint();
@@ -850,7 +988,7 @@ public:
      * are properly initialized. Once this function has returned success,
      * application must call libDestroy() before quitting.
      */
-    void libCreate() throw(Error);
+    void libCreate() PJSUA2_THROW(Error);
 
     /**
      * Get library state.
@@ -868,14 +1006,14 @@ public:
      *
      * @param prmEpConfig	Endpoint configurations
      */
-    void libInit( const EpConfig &prmEpConfig) throw(Error);
+    void libInit( const EpConfig &prmEpConfig) PJSUA2_THROW(Error);
 
     /**
      * Call this function after all initialization is done, so that the
      * library can do additional checking set up. Application may call this
      * function any time after init().
      */
-    void libStart() throw(Error);
+    void libStart() PJSUA2_THROW(Error);
 
     /**
      * Register a thread that was created by external or native API to the
@@ -885,7 +1023,7 @@ public:
      *
      * @param name	The optional name to be assigned to the thread.
      */
-    void libRegisterThread(const string &name) throw(Error);
+    void libRegisterThread(const string &name) PJSUA2_THROW(Error);
 
     /**
      * Check if this thread has been registered to the library. Note that
@@ -934,7 +1072,7 @@ public:
      *
      * @param prmFlags	Combination of pjsua_destroy_flag enumeration.
      */
-    void libDestroy(unsigned prmFlags=0) throw(Error);
+    void libDestroy(unsigned prmFlags=0) PJSUA2_THROW(Error);
 
 
     /*************************************************************************
@@ -961,6 +1099,11 @@ public:
 
     /**
      * Write a log entry.
+     * Application must implement its own custom LogWriter and
+     * this function will then call the LogWriter::write() method.
+     * Note that this function does not call PJSIP's internal
+     * logging functionality. For that, you should use
+     * utilLogWrite(prmLevel, prmSender, prmMsg) above.
      *
      * @param e			The log entry.
      */
@@ -1007,7 +1150,7 @@ public:
      * 				given to utilTimerCancel().
      */
     Token utilTimerSchedule(unsigned prmMsecDelay,
-                            Token prmUserData) throw (Error);
+                            Token prmUserData) PJSUA2_THROW(Error);
 
     /**
      * Cancel previously scheduled timer with the specified timer token.
@@ -1029,7 +1172,7 @@ public:
     /**
      * Get cipher list supported by SSL/TLS backend.
      */
-    IntVector utilSslGetAvailableCiphers() throw (Error);
+    IntVector utilSslGetAvailableCiphers() PJSUA2_THROW(Error);
 
     /*************************************************************************
      * NAT operations
@@ -1046,7 +1189,7 @@ public:
      *
      * Note that STUN must be enabled to run this function successfully.
      */
-    void natDetectType(void) throw(Error);
+    void natDetectType(void) PJSUA2_THROW(Error);
 
     /**
      * Get the NAT type as detected by natDetectType() function. This
@@ -1057,7 +1200,7 @@ public:
      * Exception: if this function is called while detection is in progress,
      * PJ_EPENDING exception will be raised.
      */
-    pj_stun_nat_type natGetType() throw(Error);
+    pj_stun_nat_type natGetType() PJSUA2_THROW(Error);
 
     /**
      * Update the STUN servers list. The libInit() must have been called
@@ -1083,7 +1226,7 @@ public:
      *
      */
     void natUpdateStunServers(const StringVector &prmServers,
-                              bool prmWait) throw(Error);
+                              bool prmWait) PJSUA2_THROW(Error);
 
     /**
      * Auxiliary function to resolve and contact each of the STUN server
@@ -1113,7 +1256,7 @@ public:
      */
     void natCheckStunServers(const StringVector &prmServers,
                              bool prmWait,
-                             Token prmUserData) throw(Error);
+                             Token prmUserData) PJSUA2_THROW(Error);
 
     /**
      * Cancel pending STUN resolution which match the specified token.
@@ -1128,7 +1271,7 @@ public:
      * Exception: PJ_ENOTFOUND if there is no matching one, or other error.
      */
     void natCancelCheckStunServers(Token token,
-                                   bool notify_cb = false) throw(Error);
+                                   bool notify_cb = false) PJSUA2_THROW(Error);
 
     /*************************************************************************
      * Transport operations
@@ -1144,7 +1287,7 @@ public:
      * @return			The transport ID.
      */
     TransportId transportCreate(pjsip_transport_type_e type,
-                                const TransportConfig &cfg) throw(Error);
+                                const TransportConfig &cfg) PJSUA2_THROW(Error);
 
     /**
      * Enumerate all transports currently created in the system. This
@@ -1154,7 +1297,7 @@ public:
      *
      * @return			Array of transport IDs.
      */
-    IntVector transportEnum() throw(Error);
+    IntVector transportEnum() PJSUA2_THROW(Error);
 
     /**
      * Get information about transport.
@@ -1163,7 +1306,7 @@ public:
      *
      * @return			Transport info.
      */
-    TransportInfo transportGetInfo(TransportId id) throw(Error);
+    TransportInfo transportGetInfo(TransportId id) PJSUA2_THROW(Error);
 
     /**
      * Disable a transport or re-enable it. By default transport is always
@@ -1175,7 +1318,7 @@ public:
      * @param enabled		Enable or disable the transport.
      *
      */
-    void transportSetEnable(TransportId id, bool enabled) throw(Error);
+    void transportSetEnable(TransportId id, bool enabled) PJSUA2_THROW(Error);
 
     /**
      * Close the transport. The system will wait until all transactions are
@@ -1184,7 +1327,7 @@ public:
      *
      * @param id		Transport ID.
      */
-    void transportClose(TransportId id) throw(Error);
+    void transportClose(TransportId id) PJSUA2_THROW(Error);
     
     /**
      * Start graceful shutdown procedure for this transport handle. After
@@ -1199,7 +1342,7 @@ public:
      *
      * @param tp		The transport.
      */
-    void transportShutdown(TransportHandle tp) throw(Error);
+    void transportShutdown(TransportHandle tp) PJSUA2_THROW(Error);
 
     /*************************************************************************
      * Call operations
@@ -1252,12 +1395,31 @@ public:
      */
     unsigned mediaActivePorts() const;
 
+#if !DEPRECATED_FOR_TICKET_2232
     /**
+     * Warning: deprecated, use mediaEnumPorts2() instead. This function is
+     * not safe in multithreaded environment.
+     *
      * Enumerate all media port.
      *
      * @return		The list of media port.
      */
-    const AudioMediaVector &mediaEnumPorts() const throw(Error);
+    const AudioMediaVector &mediaEnumPorts() const PJSUA2_THROW(Error);
+#endif
+
+    /**
+     * Enumerate all audio media port.
+     *
+     * @return		The list of audio media port.
+     */
+    AudioMediaVector2 mediaEnumPorts2() const PJSUA2_THROW(Error);
+
+    /**
+     * Enumerate all video media port.
+     *
+     * @return		The list of video media port.
+     */
+    VideoMediaVector mediaEnumVidPorts() const PJSUA2_THROW(Error);
 
     /**
      * Get the instance of Audio Device Manager.
@@ -1277,12 +1439,24 @@ public:
      * Codec management operations
      */
 
+#if !DEPRECATED_FOR_TICKET_2232
+    /**
+     * Warning: deprecated, use codecEnum2() instead. This function is not
+     * safe in multithreaded environment.
+     *
+     * Enum all supported codecs in the system.
+     *
+     * @return		Array of codec info.
+     */
+    const CodecInfoVector &codecEnum() PJSUA2_THROW(Error);
+#endif
+
     /**
      * Enum all supported codecs in the system.
      *
      * @return		Array of codec info.
      */
-    const CodecInfoVector &codecEnum() throw(Error);
+    CodecInfoVector2 codecEnum2() const PJSUA2_THROW(Error);
 
     /**
      * Change codec priority.
@@ -1294,7 +1468,7 @@ public:
      *
      */
     void codecSetPriority(const string &codec_id,
-			  pj_uint8_t priority) throw(Error);
+			  pj_uint8_t priority) PJSUA2_THROW(Error);
 
     /**
      * Get codec parameters.
@@ -1305,7 +1479,7 @@ public:
      * 			will be thrown.
      *
      */
-    CodecParam codecGetParam(const string &codec_id) const throw(Error);
+    CodecParam codecGetParam(const string &codec_id) const PJSUA2_THROW(Error);
 
     /**
      * Set codec parameters.
@@ -1316,14 +1490,26 @@ public:
      *
      */
     void codecSetParam(const string &codec_id,
-		       const CodecParam param) throw(Error);
+		       const CodecParam param) PJSUA2_THROW(Error);
+
+#if !DEPRECATED_FOR_TICKET_2232
+    /**
+     * Warning: deprecated, use videoCodecEnum2() instead. This function is
+     * not safe in multithreaded environment.
+     *
+     * Enum all supported video codecs in the system.
+     *  
+     * @return		Array of video codec info.
+     */
+    const CodecInfoVector &videoCodecEnum() PJSUA2_THROW(Error);
+#endif
 
     /**
      * Enum all supported video codecs in the system.
      *  
      * @return		Array of video codec info.
      */
-    const CodecInfoVector &videoCodecEnum() throw(Error);
+    CodecInfoVector2 videoCodecEnum2() const PJSUA2_THROW(Error);
 
     /**
      * Change video codec priority.
@@ -1336,7 +1522,7 @@ public:
      *
      */
     void videoCodecSetPriority(const string &codec_id,
-			       pj_uint8_t priority) throw(Error);
+			       pj_uint8_t priority) PJSUA2_THROW(Error);
 
     /**
      * Get video codec parameters.
@@ -1347,7 +1533,8 @@ public:
      *			will be thrown.
      *
      */
-    VidCodecParam getVideoCodecParam(const string &codec_id) const throw(Error);
+    VidCodecParam getVideoCodecParam(const string &codec_id) const
+				     PJSUA2_THROW(Error);
 
     /**
      * Set video codec parameters.
@@ -1357,7 +1544,7 @@ public:
      *
      */
     void setVideoCodecParam(const string &codec_id,
-			    const VidCodecParam &param) throw(Error);
+			    const VidCodecParam &param) PJSUA2_THROW(Error);
 			    
     /**
      * Reset video codec parameters to library default settings.
@@ -1365,7 +1552,56 @@ public:
      * @param codec_id	Codec ID.
      *
      */
-    void resetVideoCodecParam(const string &codec_id) throw(Error);
+    void resetVideoCodecParam(const string &codec_id) PJSUA2_THROW(Error);
+
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC!=0)
+    /**
+     * Get codec Opus config.
+     *
+     */
+     CodecOpusConfig getCodecOpusConfig() const PJSUA2_THROW(Error);
+
+    /**
+     * Set codec Opus config.
+     *
+     * @param opus_cfg	Codec Opus configuration.
+     *
+     */
+    void setCodecOpusConfig(const CodecOpusConfig &opus_cfg)
+			    PJSUA2_THROW(Error);
+#endif
+
+    /**
+     * Enumerate all SRTP crypto-suite names.
+     *
+     * @return		The list of SRTP crypto-suite name.
+     */
+    StringVector srtpCryptoEnum() PJSUA2_THROW(Error);
+
+    /*************************************************************************
+     * IP Change
+     */
+
+    /**
+     * Inform the stack that IP address change event was detected.
+     * The stack will:
+     * 1. Restart the listener (this step is configurable via
+     *    \a IpChangeParam.restartListener).
+     * 2. Shutdown the transport used by account registration (this step is
+     *    configurable via \a AccountConfig.ipChangeConfig.shutdownTp).
+     * 3. Update contact URI by sending re-Registration (this step is 
+     *    configurable via a\ AccountConfig.natConfig.contactRewriteUse and
+     *    a\ AccountConfig.natConfig.contactRewriteMethod)
+     * 4. Hangup active calls (this step is configurable via
+     *    a\ AccountConfig.ipChangeConfig.hangupCalls) or
+     *    continue the call by sending re-INVITE
+     *    (configurable via \a AccountConfig.ipChangeConfig.reinviteFlags).
+     *
+     * @param param	The IP change parameter, have a look at #IpChangeParam.
+     *
+     * @return		PJ_SUCCESS on success, other on error.
+     */
+    void handleIpChange(const IpChangeParam &param) PJSUA2_THROW(Error);
 
 public:
     /*
@@ -1430,15 +1666,43 @@ public:
     virtual void onSelectAccount(OnSelectAccountParam &prm)
     { PJ_UNUSED_ARG(prm); }
 
+    /**
+     * Calling #handleIpChange() may involve different operation. This 
+     * callback is called to report the progress of each enabled operation.
+     *
+     * @param prm	Callback parameters.
+     * 
+     */
+    virtual void onIpChangeProgress(OnIpChangeProgressParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
+    /**
+     * Notification about media events such as video notifications. This
+     * callback will most likely be called from media threads, thus
+     * application must not perform heavy processing in this callback.
+     * If application needs to perform more complex tasks to handle the
+     * event, it should post the task to another thread.
+     *
+     * @param prm	Callback parameter.
+     */
+    virtual void onMediaEvent(OnMediaEventParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
 private:
     static Endpoint		*instance_;	// static instance
     LogWriter			*writer;	// Custom writer, if any
-    AudioMediaVector 	 	 mediaList;
     AudDevManager		 audioDevMgr;
     VidDevManager		 videoDevMgr;
+#if !DEPRECATED_FOR_TICKET_2232
     CodecInfoVector		 codecInfoList;
     CodecInfoVector		 videoCodecInfoList;
+#endif
     std::map<pj_thread_t*, pj_thread_desc*> threadDescMap;
+    pj_mutex_t			*threadDescMutex;
+#if !DEPRECATED_FOR_TICKET_2232
+    AudioMediaVector 	 	 mediaList;
+    pj_mutex_t			*mediaListMutex;
+#endif
 
     /* Pending logging */
     bool			 mainThreadOnly;
@@ -1510,6 +1774,9 @@ private:
     static void on_acc_find_for_incoming(const pjsip_rx_data *rdata,
 				     	 pjsua_acc_id* acc_id);
     static void on_buddy_state(pjsua_buddy_id buddy_id);
+    static void on_buddy_evsub_state(pjsua_buddy_id buddy_id,
+				     pjsip_evsub *sub,
+				     pjsip_event *event);
     // Call callbacks
     static void on_call_state(pjsua_call_id call_id, pjsip_event *e);
     static void on_call_tsx_state(pjsua_call_id call_id,
@@ -1520,14 +1787,14 @@ private:
                                     pjmedia_sdp_session *sdp,
                                     pj_pool_t *pool,
                                     const pjmedia_sdp_session *rem_sdp);
-    static void on_stream_created(pjsua_call_id call_id,
-                                  pjmedia_stream *strm,
-                                  unsigned stream_idx,
-                                  pjmedia_port **p_port);
+    static void on_stream_created2(pjsua_call_id call_id,
+				   pjsua_on_stream_created_param *param);
     static void on_stream_destroyed(pjsua_call_id call_id,
                                     pjmedia_stream *strm,
                                     unsigned stream_idx);
     static void on_dtmf_digit(pjsua_call_id call_id, int digit);
+    static void on_dtmf_digit2(pjsua_call_id call_id, 
+			       const pjsua_dtmf_info *info);
     static void on_call_transfer_request(pjsua_call_id call_id,
                                          const pj_str_t *dst,
                                          pjsip_status_code *code);
@@ -1556,6 +1823,13 @@ private:
                                  void *reserved,
                                  pjsip_status_code *code,
                                  pjsua_call_setting *opt);
+    static void on_call_rx_reinvite(pjsua_call_id call_id,
+                                    const pjmedia_sdp_session *offer,
+                                    pjsip_rx_data *rdata,
+                                    void *reserved,
+                                    pj_bool_t *async,
+                                    pjsip_status_code *code,
+                                    pjsua_call_setting *opt);
     static void on_call_tx_offer(pjsua_call_id call_id,
 				 void *reserved,
 				 pjsua_call_setting *opt);
@@ -1565,6 +1839,7 @@ private:
     static pj_status_t
     on_call_media_transport_state(pjsua_call_id call_id,
                                   const pjsua_med_tp_state_info *info);
+    static void on_media_event(pjmedia_event *event);
     static void on_call_media_event(pjsua_call_id call_id,
                                     unsigned med_idx,
                                     pjmedia_event *event);
@@ -1577,6 +1852,11 @@ private:
     on_create_media_transport_srtp(pjsua_call_id call_id,
                                    unsigned media_idx,
                                    pjmedia_srtp_setting *srtp_opt);
+
+    static void
+    on_ip_change_progress(pjsua_ip_change_op op,
+			  pj_status_t status,
+			  const pjsua_ip_change_op_info *info);
 
 private:
     void clearCodecInfoList(CodecInfoVector &codec_list);

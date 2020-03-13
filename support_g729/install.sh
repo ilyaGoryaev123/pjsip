@@ -6,7 +6,7 @@ PJSIP_VERSION=$2
 cd "support_g729"
 echo "Installing G729..."
 
-if [ "$PJSIP_VERSION" == "2.8" ]
+if [ "$PJSIP_VERSION" == "2.10" ]
 then
     cp g729.patch $PJPROJECT_BASE_FOLDER
 else

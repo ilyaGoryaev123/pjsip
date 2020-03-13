@@ -1,4 +1,4 @@
-/* $Id: presence.hpp 4704 2014-01-16 05:30:46Z ming $ */
+/* $Id$ */
 /*
  * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
@@ -100,14 +100,14 @@ public:
      *
      * @param node		Container to read values from.
      */
-    virtual void readObject(const ContainerNode &node) throw(Error);
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const throw(Error);
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
 
 
@@ -168,15 +168,50 @@ struct BuddyInfo
      * Presence status.
      */
     PresenceStatus	 presStatus;
-    
+
 public:
+    /**
+     * Default constructor
+     */
+    BuddyInfo() : subState(PJSIP_EVSUB_STATE_UNKNOWN),
+		  subTermCode(PJSIP_SC_NULL)
+    {}
+		    
+
     /** Import from pjsip structure */
     void fromPj(const pjsua_buddy_info &pbi);
 };
 
 
 /**
- * Buddy.
+ * This structure contains parameters for Buddy::onBuddyEvSubState() callback.
+ */
+struct OnBuddyEvSubStateParam
+{
+    /**
+     * * The event which triggers state change event.
+     */
+    SipEvent    e;
+};
+
+
+/**
+ * Buddy. This is a lite wrapper class for PJSUA-LIB buddy, i.e: this class
+ * only maintains one data member, PJSUA-LIB buddy ID, and the methods are
+ * simply proxies for PJSUA-LIB buddy operations.
+ *
+ * Application can use create() to register a buddy to PJSUA-LIB, and
+ * the destructor of the original instance (i.e: the instance that calls
+ * create()) will unregister and delete the buddy from PJSUA-LIB. Application
+ * must delete all Buddy instances belong to an account before shutting down
+ * the account (via Account::shutdown()).
+ *
+ * The library will not keep a list of Buddy instances, so any Buddy (or
+ * descendant) instances instantiated by application must be maintained
+ * and destroyed by the application itself. Any PJSUA2 APIs that return Buddy
+ * instance(s) such as Account::enumBuddies2() or Account::findBuddy2() will
+ * just return generated copy. All Buddy methods should work normally on this
+ * generated copy instance.
  */
 class Buddy
 {
@@ -187,18 +222,25 @@ public:
     Buddy();
     
     /**
-     * Destructor. Note that if the Buddy instance is deleted, it will also
-     * delete the corresponding buddy in the PJSUA-LIB.
+     * Destructor. Note that if the Buddy original instance (i.e: the instance
+     * that calls Buddy::create()) is destroyed, it will also delete the
+     * corresponding buddy in the PJSUA-LIB. While the destructor of
+     * a generated copy (i.e: Buddy instance returned by PJSUA2 APIs such as
+     * Account::enumBuddies2() or Account::findBuddy2()) will do nothing.
      */
     virtual ~Buddy();
     
     /**
      * Create buddy and register the buddy to PJSUA-LIB.
      *
+     * Note that application should maintain the Buddy original instance, i.e:
+     * the instance that calls this create() method as it is only the original
+     * instance destructor that will delete the underlying Buddy in PJSUA-LIB.
+     *
      * @param acc		The account for this buddy.
      * @param cfg		The buddy config.
      */
-    void create(Account &acc, const BuddyConfig &cfg) throw(Error);
+    void create(Account &acc, const BuddyConfig &cfg) PJSUA2_THROW(Error);
     
     /**
      * Check if this buddy is valid.
@@ -212,7 +254,7 @@ public:
      *
      * @return			Buddy info.
      */
-    BuddyInfo getInfo() const throw(Error);
+    BuddyInfo getInfo() const PJSUA2_THROW(Error);
 
     /**
      * Enable/disable buddy's presence monitoring. Once buddy's presence is
@@ -222,7 +264,7 @@ public:
      * @param subscribe		Specify true to activate presence
      *				subscription.
      */
-    void subscribePresence(bool subscribe) throw(Error);
+    void subscribePresence(bool subscribe) PJSUA2_THROW(Error);
     
     /**
      * Update the presence information for the buddy. Although the library
@@ -240,7 +282,7 @@ public:
      * application will be notified about the buddy's presence status in the
      * \a onBuddyState() callback.
      */
-     void updatePresence(void) throw(Error);
+     void updatePresence(void) PJSUA2_THROW(Error);
      
     /**
      * Send instant messaging outside dialog, using this buddy's specified
@@ -248,7 +290,8 @@ public:
      *
      * @param prm	Sending instant message parameter.
      */
-    void sendInstantMessage(const SendInstantMessageParam &prm) throw(Error);
+    void sendInstantMessage(const SendInstantMessageParam &prm)
+			    PJSUA2_THROW(Error);
 
     /**
      * Send typing indication outside dialog.
@@ -256,7 +299,7 @@ public:
      * @param prm	Sending instant message parameter.
      */
     void sendTypingIndication(const SendTypingIndicationParam &prm)
-	 throw(Error);
+	 PJSUA2_THROW(Error);
 
 public:
     /*
@@ -269,22 +312,43 @@ public:
      */
     virtual void onBuddyState()
     {}
+
+    /**
+     * Notify application when the state of client subscription session
+     * associated with a buddy has changed. Application may use this
+     * callback to retrieve more detailed information about the state
+     * changed event.
+     *
+     * @param prm	Callback parameter.
+     */
+    virtual void onBuddyEvSubState(OnBuddyEvSubStateParam &prm)
+    { PJ_UNUSED_ARG(prm); }
      
 private:
      /**
       * Buddy ID.
       */
-     pjsua_buddy_id	 id;
-     
-     /**
-      * Account.
-      */
-     Account		*acc;
+    pjsua_buddy_id	 id;
+
+private:
+    friend class Endpoint;
+    friend class Account;
+
+    /* Internal constructor/methods used by Endpoint and Account */
+    Buddy(pjsua_buddy_id buddy_id);
+    Buddy *getOriginalInstance();
 };
 
 
-/** Array of buddies */
+/**
+ * Warning: deprecated, use BuddyVector2 instead.
+ *
+ * Array of buddies.
+ */
 typedef std::vector<Buddy*> BuddyVector;
+
+/** Array of buddies */
+typedef std::vector<Buddy> BuddyVector2;
 
 
 /**

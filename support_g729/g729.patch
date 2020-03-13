@@ -95,14 +95,14 @@ diff -Naur pjmedia/include/pjmedia-codec/config.h pjmedia/include/pjmedia-codec/
 diff -Naur pjmedia/include/pjmedia-codec.h pjmedia/include/pjmedia-codec.h
 --- pjmedia/include/pjmedia-codec.h	2015-12-27 11:12:51.000000000 +0000
 +++ pjmedia/include/pjmedia-codec.h	2015-12-27 11:17:48.000000000 +0000
-@@ -33,6 +33,7 @@
- #include <pjmedia-codec/ilbc.h>
+@@ -30,6 +30,7 @@
+ #include <pjmedia-codec/bcg729.h>
+ #include <pjmedia-codec/ffmpeg_vid_codecs.h>
  #include <pjmedia-codec/g722.h>
- #include <pjmedia-codec/g7221.h>
 +#include <pjmedia-codec/g729.h>
- #include <pjmedia-codec/ipp_codecs.h>
- #include <pjmedia-codec/opencore_amr.h>
- #include <pjmedia-codec/openh264.h>
+ #include <pjmedia-codec/g7221.h>
+ #include <pjmedia-codec/gsm.h>
+ #include <pjmedia-codec/ilbc.h>
 diff -Naur pjmedia/src/pjmedia-codec/audio_codecs.c pjmedia/src/pjmedia-codec/audio_codecs.c
 --- pjmedia/src/pjmedia-codec/audio_codecs.c	2015-12-27 11:12:51.000000000 +0000
 +++ pjmedia/src/pjmedia-codec/audio_codecs.c	2015-12-27 11:20:05.000000000 +0000

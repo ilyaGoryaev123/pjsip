@@ -1,4 +1,4 @@
-/* $Id: config.h 5550 2017-01-26 02:29:59Z nanang $ */
+/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -114,12 +114,6 @@
 #   undef PJ_WIN32
 #   define PJ_WIN32 1
 #   include <pj/compat/os_win32.h>
-
-#elif defined(PJ_LINUX_KERNEL) && PJ_LINUX_KERNEL!=0
-    /*
-     * Linux kernel
-     */
-#  include <pj/compat/os_linux_kernel.h>
 
 #elif defined(PJ_LINUX) || defined(linux) || defined(__linux)
     /*
@@ -472,6 +466,33 @@
 #endif
 
 /**
+ * Log sender width.
+ *
+ * Default: 22 (for 64-bit machines), 14 otherwise
+ */
+#ifndef PJ_LOG_SENDER_WIDTH
+#   if PJ_HAS_STDINT_H
+#       include <stdint.h>
+#       if (UINTPTR_MAX == 0xffffffffffffffff)
+#           define PJ_LOG_SENDER_WIDTH  22
+#       else
+#           define PJ_LOG_SENDER_WIDTH  14
+#       endif
+#   else
+#       define PJ_LOG_SENDER_WIDTH  14
+#   endif
+#endif
+
+/**
+ * Log thread name width.
+ *
+ * Default: 12
+ */
+#ifndef PJ_LOG_THREAD_WIDTH
+#   define PJ_LOG_THREAD_WIDTH	    12
+#endif
+
+/**
  * Colorfull terminal (for logging etc).
  *
  * Default: 1
@@ -511,17 +532,60 @@
 
 
 /**
- * Enable timer heap debugging facility. When this is enabled, application
- * can call pj_timer_heap_dump() to show the contents of the timer heap
- * along with the source location where the timer entries were scheduled.
- * See https://trac.pjsip.org/repos/ticket/1527 for more info.
+ * If enabled, when calling pj_pool_release(), the memory pool content
+ * will be wiped out first before released.
  *
  * Default: 0
  */
-#ifndef PJ_TIMER_DEBUG
-#  define PJ_TIMER_DEBUG	    0
+#ifndef PJ_POOL_RELEASE_WIPE_DATA
+#  define PJ_POOL_RELEASE_WIPE_DATA 	0
 #endif
 
+
+/**
+ * Enable timer debugging facility. When this is enabled, application
+ * can call pj_timer_heap_dump() to show the contents of the timer
+ * along with the source location where the timer entries were scheduled.
+ * See https://trac.pjsip.org/repos/ticket/1527 for more info.
+ *
+ * Default: 1
+ */
+#ifndef PJ_TIMER_DEBUG
+#  define PJ_TIMER_DEBUG	    1
+#endif
+
+
+/**
+ * If enabled, the timer will keep internal copies of the timer entries.
+ * This will increase the robustness and stability of the timer (against
+ * accidental modification or premature deallocation of the timer entries) and
+ * makes it easier to troubleshoot any timer related issues, with the overhead
+ * of additional memory space required.
+ *
+ * Note that the detection against premature deallocation only works if the
+ * freed memory content has changed (such as if it's been reallocated and
+ * overwritten by another data. Alternatively, you can enable
+ * PJ_POOL_RELEASE_WIPE_DATA which will erase the data first before releasing
+ * the memory).
+ *
+ * Default: 1 (enabled)
+ */
+#ifndef PJ_TIMER_USE_COPY
+#  define PJ_TIMER_USE_COPY    1
+#endif
+
+
+/**
+ * If enabled, the timer use sorted linked list instead of binary heap tree
+ * structure. Note that using sorted linked list is intended for debugging
+ * purposes and will hamper performance significantly when scheduling large
+ * number of entries.
+ *
+ * Default: 0 (Use binary heap tree)
+ */
+#ifndef PJ_TIMER_USE_LINKED_LIST
+#  define PJ_TIMER_USE_LINKED_LIST    0
+#endif
 
 /**
  * Set this to 1 to enable debugging on the group lock. Default: 0
@@ -882,19 +946,50 @@
 #   if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE && _WIN32_WCE >= 0x502
 	/* Windows Mobile 6 or later */
 #	define PJ_QOS_IMPLEMENTATION    PJ_QOS_WM
+#   elif defined(PJ_DARWINOS)
+	/* Darwin OS (e.g: iOS, MacOS, tvOS) */
+#	define PJ_QOS_IMPLEMENTATION    PJ_QOS_DARWIN
 #   endif
 #endif
 
 
 /**
  * Enable secure socket. For most platforms, this is implemented using
- * OpenSSL, so this will require OpenSSL to be installed. For Symbian
- * platform, this is implemented natively using CSecureSocket.
+ * OpenSSL or GnuTLS, so this will require one of those libraries to
+ * be installed. For Symbian platform, this is implemented natively
+ * using CSecureSocket.
  *
  * Default: 0 (for now)
  */
 #ifndef PJ_HAS_SSL_SOCK
 #  define PJ_HAS_SSL_SOCK	    0
+#endif
+
+
+/*
+ * Secure socket implementation.
+ * Select one of these implementations in PJ_SSL_SOCK_IMP.
+ */
+#define PJ_SSL_SOCK_IMP_NONE 	    0	/**< Disable SSL socket.    */
+#define PJ_SSL_SOCK_IMP_OPENSSL	    1	/**< Using OpenSSL.	    */
+#define PJ_SSL_SOCK_IMP_GNUTLS      2	/**< Using GnuTLS.	    */
+
+
+/**
+ * Select which SSL socket implementation to use. Currently pjlib supports
+ * PJ_SSL_SOCK_IMP_OPENSSL, which uses OpenSSL, and PJ_SSL_SOCK_IMP_GNUTLS,
+ * which uses GnuTLS. Setting this to PJ_SSL_SOCK_IMP_NONE will disable
+ * secure socket.
+ *
+ * Default is PJ_SSL_SOCK_IMP_NONE if PJ_HAS_SSL_SOCK is not set, otherwise
+ * it is PJ_SSL_SOCK_IMP_OPENSSL.
+ */
+#ifndef PJ_SSL_SOCK_IMP
+#   if PJ_HAS_SSL_SOCK==0
+#	define PJ_SSL_SOCK_IMP		    PJ_SSL_SOCK_IMP_NONE
+#   else
+#	define PJ_SSL_SOCK_IMP		    PJ_SSL_SOCK_IMP_OPENSSL
+#   endif
 #endif
 
 
@@ -939,6 +1034,17 @@
 #ifndef PJ_SOCK_DISABLE_WSAECONNRESET
 #   define PJ_SOCK_DISABLE_WSAECONNRESET    1
 #endif
+
+
+/**
+ * Maximum number of socket options in pj_sockopt_params.
+ *
+ * Default: 4
+ */
+#ifndef PJ_MAX_SOCKOPT_PARAMS
+#   define PJ_MAX_SOCKOPT_PARAMS	    4
+#endif
+
 
 
 /** @} */
@@ -1260,10 +1366,10 @@ PJ_BEGIN_DECL
 #define PJ_VERSION_NUM_MAJOR	2
 
 /** PJLIB version minor number. */
-#define PJ_VERSION_NUM_MINOR	6
+#define PJ_VERSION_NUM_MINOR	10
 
 /** PJLIB version revision number. */
-#define PJ_VERSION_NUM_REV	0
+#define PJ_VERSION_NUM_REV      0
 
 /**
  * Extra suffix for the version (e.g. "-trunk"), or empty for

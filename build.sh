@@ -1,5 +1,12 @@
 #!/bin/sh
 
+# environment variables
+export OPENSSL_VERSION="1.1.1c" # specify the openssl version to use
+export PJSIP_VERSION="2.10"
+export OPUS_VERSION="1.3.1"
+export MACOS_MIN_SDK_VERSION="10.12"
+export IOS_MIN_SDK_VERSION="9.0"
+
 # see http://stackoverflow.com/a/3915420/318790
 function realpath { echo $(cd $(dirname "$1"); pwd)/$(basename "$1"); }
 __FILE__=`realpath "$0"`
@@ -19,38 +26,16 @@ function download() {
 OPENSSL_DIR="${BUILD_DIR}/openssl"
 OPENSSL_ENABLED=
 function openssl() {
-    OPENSSL_URL="https://github.com/x2on/OpenSSL-for-iPhone/archive/1.0.2i.tar.gz"
-    #OPENSSL_URL="https://raw.githubusercontent.com/x2on/OpenSSL-for-iPhone/master/build-libssl.sh"
-    OPENSSL_SH="build-libssl.sh"
-
-
-    if [ ! -f "${OPENSSL_DIR}/lib/libssl.a" ]; then
-        download ${OPENSSL_URL} ${OPENSSL_DIR}
-        pushd . > /dev/null
-        cd ${OPENSSL_DIR}
-        /bin/sh ${OPENSSL_SH}
-        mv include include2
-        mkdir -p include
-        mv include2 include/openssl
-        popd > /dev/null
+    if [ ! -d "${OPENSSL_DIR}/lib/iOS" ] || [ ! -d "${OPENSSL_DIR}/lib/macOS" ]; then
+        if [ ! -d "${OPENSSL_DIR}" ]; then
+            mkdir -p "${OPENSSL_DIR}"
+        fi
+        "${__DIR__}/openssl/openssl.sh" "--version=${OPENSSL_VERSION}" "--reporoot=${OPENSSL_DIR}" "--macos-min-sdk=${MACOS_MIN_SDK_VERSION}" "--ios-min-sdk=${IOS_MIN_SDK_VERSION}"
     else
         echo "Using OpenSSL..."
     fi
 
     OPENSSL_ENABLED=1
-}
-
-# openh264
-OPENH264_DIR="${BUILD_DIR}/openh264"
-OPENH264_ENABLED=
-function openh264() {
-    if [ ! -f "${OPENH264_DIR}/lib/libopenh264.a" ] || [ ! -d "${OPENH264_DIR}/include/wels/" ]; then
-        "${__DIR__}/openh264.sh" "${OPENH264_DIR}"
-    else
-        echo "Using OpenH264..."
-    fi
-
-    OPENH264_ENABLED=1
 }
 
 G729_ENABLED=
@@ -74,9 +59,6 @@ function opus() {
 PJSIP_DIR="${BUILD_DIR}/pjproject"
 function pjsip() {
     ARGS=
-    if [[ OPENH264_ENABLED ]]; then
-        ARGS+=("--with-openh264" "${OPENH264_DIR}")
-    fi
     if [[ OPENSSL_ENABLED ]]; then
         ARGS+=("--with-openssl" "${OPENSSL_DIR}")
     fi
@@ -92,7 +74,6 @@ function pjsip() {
 }
 
 openssl
-openh264
 opus
 enable_g729
 pjsip

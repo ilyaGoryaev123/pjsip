@@ -1,4 +1,4 @@
-/* $Id: ssl_sock.h 5472 2016-10-27 07:58:01Z ming $ */
+/* $Id$ */
 /* 
  * Copyright (C) 2009-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -184,8 +184,17 @@ typedef struct pj_ssl_cert_info {
     pj_str_t raw;		    /**< Raw certificate in PEM format, only
 					 available for remote certificate. */
 
+    struct {
+        unsigned    	cnt;        /**< # of entry     */
+        pj_str_t       *cert_raw;
+    } raw_chain;
+
 } pj_ssl_cert_info;
 
+/**
+ * The SSL certificate buffer.
+ */
+typedef pj_str_t pj_ssl_cert_buffer;
 
 /**
  * Create credential from files. TLS server application can provide multiple
@@ -238,6 +247,25 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_files2(
 
 
 /**
+ * Create credential from data buffer. The certificate expected is in 
+ * PEM format.
+ *
+ * @param CA_file	The buffer of trusted CA list.
+ * @param cert_file	The buffer of certificate.
+ * @param privkey_file	The buffer of private key.
+ * @param privkey_pass	The password of private key, if any.
+ * @param p_cert	Pointer to credential instance to be created.
+ *
+ * @return		PJ_SUCCESS when successful.
+ */
+PJ_DECL(pj_status_t) pj_ssl_cert_load_from_buffer(pj_pool_t *pool,
+					const pj_ssl_cert_buffer *CA_buf,
+					const pj_ssl_cert_buffer *cert_buf,
+					const pj_ssl_cert_buffer *privkey_buf,
+					const pj_str_t *privkey_pass,
+					pj_ssl_cert_t **p_cert);
+
+/**
  * Dump SSL certificate info.
  *
  * @param ci		The certificate info.
@@ -270,6 +298,14 @@ PJ_DECL(pj_status_t) pj_ssl_cert_get_verify_status_strings(
 						 pj_uint32_t verify_status, 
 						 const char *error_strings[],
 						 unsigned *count);
+
+/** 
+ * Wipe out the keys in the SSL certificate. 
+ *
+ * @param cert		The SSL certificate. 
+ *
+ */
+PJ_DECL(void) pj_ssl_cert_wipe_keys(pj_ssl_cert_t *cert);
 
 
 /** 
@@ -577,7 +613,8 @@ typedef struct pj_ssl_sock_cb
 
     /**
      * This callback is called when new connection arrives as the result
-     * of pj_ssl_sock_start_accept().
+     * of pj_ssl_sock_start_accept(). If the status of accept operation is
+     * needed use on_accept_complete2 instead of this callback.
      *
      * @param ssock	The secure socket.
      * @param newsock	The new incoming secure socket.
@@ -593,6 +630,29 @@ typedef struct pj_ssl_sock_cb
 				    pj_ssl_sock_t *newsock,
 				    const pj_sockaddr_t *src_addr,
 				    int src_addr_len);
+    /**
+     * This callback is called when new connection arrives as the result
+     * of pj_ssl_sock_start_accept().
+     *
+     * @param asock	The active socket.
+     * @param newsock	The new incoming socket.
+     * @param src_addr	The source address of the connection.
+     * @param addr_len	Length of the source address.
+     * @param status	The status of the accept operation. This may contain
+     *			non-PJ_SUCCESS for example when the TCP listener is in
+     *			bad state for example on iOS platform after the
+     *			application waking up from background.
+     *
+     * @return		PJ_TRUE if further accept() is desired, and PJ_FALSE
+     *			when application no longer wants to accept incoming
+     *			connection. Application may destroy the active socket
+     *			in the callback and return PJ_FALSE here.
+     */
+    pj_bool_t (*on_accept_complete2)(pj_ssl_sock_t *ssock,
+				     pj_ssl_sock_t *newsock,
+				     const pj_sockaddr_t *src_addr,
+				     int src_addr_len, 
+				     pj_status_t status);
 
     /**
      * This callback is called when pending connect operation has been
@@ -653,6 +713,7 @@ typedef enum pj_ssl_sock_proto
      * protocol. 
      */
     PJ_SSL_SOCK_PROTO_SSL23   = (1 << 16) - 1,
+    PJ_SSL_SOCK_PROTO_ALL = PJ_SSL_SOCK_PROTO_SSL23,
 
     /**
      * DTLSv1.0 protocol.	  
@@ -996,6 +1057,40 @@ typedef struct pj_ssl_sock_param
 
 
 /**
+ * The parameter for pj_ssl_sock_start_connect2().
+ */
+typedef struct pj_ssl_start_connect_param {
+    /**
+     * The pool to allocate some internal data for the operation.
+     */
+    pj_pool_t *pool;
+
+    /**
+     * Local address.
+     */
+    const pj_sockaddr_t *localaddr;
+
+    /**
+     * Port range for socket binding, relative to the start port number
+     * specified in \a localaddr. This is only applicable when the start port
+     * number is non zero.
+     */
+    pj_uint16_t local_port_range;
+
+    /**
+     * Remote address.
+     */
+    const pj_sockaddr_t *remaddr;
+
+    /**
+     * Length of buffer containing above addresses.
+     */
+    int addr_len;
+
+} pj_ssl_start_connect_param;
+
+
+/**
  * Initialize the secure socket parameters for its creation with 
  * the default values.
  *
@@ -1315,6 +1410,24 @@ PJ_DECL(pj_status_t) pj_ssl_sock_start_connect(pj_ssl_sock_t *ssock,
 					       const pj_sockaddr_t *remaddr,
 					       int addr_len);
 
+/**
+ * Same as #pj_ssl_sock_start_connect(), but application can provide a 
+ * \a port_range parameter, which will be used to bind the socket to 
+ * random port.
+ *
+ * @param ssock		The secure socket.
+ *
+ * @param connect_param The parameter, refer to \a pj_ssl_start_connect_param.
+ *
+ * @return		PJ_SUCCESS if connection can be established immediately
+ *			or PJ_EPENDING if connection cannot be established 
+ *			immediately. In this case the \a on_connect_complete()
+ *			callback will be called when connection is complete. 
+ *			Any other return value indicates error condition.
+ */
+PJ_DECL(pj_status_t) pj_ssl_sock_start_connect2(
+			      pj_ssl_sock_t *ssock,
+			      pj_ssl_start_connect_param *connect_param);
 
 /**
  * Starts SSL/TLS renegotiation over an already established SSL connection
@@ -1331,7 +1444,6 @@ PJ_DECL(pj_status_t) pj_ssl_sock_start_connect(pj_ssl_sock_t *ssock,
  *			on failure.
  */
 PJ_DECL(pj_status_t) pj_ssl_sock_renegotiate(pj_ssl_sock_t *ssock);
-
 
 /**
  * @}

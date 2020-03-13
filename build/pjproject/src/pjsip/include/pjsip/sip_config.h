@@ -1,4 +1,4 @@
-/* $Id: sip_config.h 5336 2016-06-07 10:07:57Z riza $ */
+/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -156,6 +156,30 @@ typedef struct pjsip_cfg_t
 	 * Default is PJ_FALSE.
 	 */
 	pj_bool_t disable_secure_dlg_check;
+
+	/**
+	 * Encode SIP headers in their short forms to reduce size. By default,
+	 * SIP headers in outgoing messages will be encoded in their full names.
+	 * If this option is enabled, then SIP headers for outgoing messages
+	 * will be encoded in their short forms, to reduce message size. 
+	 * Note that this does not affect the ability of PJSIP to parse incoming
+	 * SIP messages, as the parser always supports parsing both the long
+	 * and short version of the headers.
+	 *
+	 * Default is PJSIP_ENCODE_SHORT_HNAME
+	 */
+	pj_bool_t use_compact_form;
+
+        /**
+         * Accept multiple SDP answers on non-reliable 18X responses and the 2XX
+         * response when they are all received from the same source (same To tag).
+         *
+         * See also:
+         * https://tools.ietf.org/html/rfc6337#section-3.1.1
+         *
+         * Default is PJSIP_ACCEPT_MULTIPLE_SDP_ANSWERS.
+         */
+        pj_bool_t accept_multiple_sdp_answers;
 
     } endpt;
 
@@ -376,6 +400,16 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_DONT_SWITCH_TO_TLS	0
 #endif
 
+/**
+ * Specify if #pjsip_endpt_handle_events() should sleep if ioqueue poll
+ * returns error.
+ *
+ * Default is 1 (yes).
+ */
+
+#ifndef PJSIP_HANDLE_EVENTS_HAS_SLEEP_ON_ERR
+#   define PJSIP_HANDLE_EVENTS_HAS_SLEEP_ON_ERR	    1
+#endif
 
 /**
  * Specify whether the call media session should be updated to the latest
@@ -389,6 +423,20 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  */
 #ifndef PJSIP_FOLLOW_EARLY_MEDIA_FORK
 #   define PJSIP_FOLLOW_EARLY_MEDIA_FORK	    PJ_TRUE
+#endif
+
+
+/**
+ * Accept multiple SDP answers on non-reliable 18X responses and the 2XX
+ * response when they are all received from the same source (same To tag).
+ *
+ * This option can also be controlled at run-time by the
+ * \a accept_multiple_sdp_answers setting in pjsip_cfg_t.
+ *
+ * Default is PJ_TRUE.
+ */
+#ifndef PJSIP_ACCEPT_MULTIPLE_SDP_ANSWERS
+#   define PJSIP_ACCEPT_MULTIPLE_SDP_ANSWERS        PJ_TRUE
 #endif
 
 
@@ -454,18 +502,8 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * SIP messages, as the parser always supports parsing both the long
  * and short version of the headers.
  *
- * Note that there is also an undocumented variable defined in sip_msg.c
- * to control whether compact form should be used for encoding SIP
- * headers. The default value of this variable is PJSIP_ENCODE_SHORT_HNAME.
- * To change PJSIP behavior during run-time, application can use the 
- * following construct:
- *
- \verbatim
-   extern pj_bool_t pjsip_use_compact_form;
- 
-   // enable compact form
-   pjsip_use_compact_form = PJ_TRUE;
- \endverbatim
+ * This option can also be controlled at run-time by the
+ * \a use_compact_form setting in pjsip_cfg_t.
  *
  * Default is 0 (no)
  */
@@ -654,7 +692,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * will be used as the default value for the "reuse_addr" field in the
  * pjsip_tcp_transport_cfg structure.
  *
- * Default is FALSE on Windows and TRUE on non-Windows.
+ * Default is 0 on Windows and 1 on non-Windows.
  *
  * @see PJSIP_TLS_TRANSPORT_REUSEADDR
  */
@@ -680,7 +718,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * pj_getipinterface()/pj_gethostip(), but the address will not be
  * able to accept connections. 
  *
- * Default is FALSE (listener will be created).
+ * Default is 0 (listener will be created).
  */
 #ifndef PJSIP_TCP_TRANSPORT_DONT_CREATE_LISTENER
 #   define PJSIP_TCP_TRANSPORT_DONT_CREATE_LISTENER 0
@@ -700,7 +738,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * pj_getipinterface()/pj_gethostip(), but the address will not be
  * able to accept connections.
  *
- * Default is FALSE (listener will be created).
+ * Default is 0 (listener will be created).
  */
 #ifndef PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER
 #   define PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER 0
@@ -732,6 +770,21 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_TCP_KEEP_ALIVE_DATA	    { "\r\n\r\n", 4 }
 #endif
 
+
+/**
+ * Initial timeout interval to be applied to incoming transports (i.e. server
+ * side) when no data received after a successful connection. Value is in
+ * seconds. Disable the timeout by setting it to 0.
+ *
+ * Note that even when this is disable, the connection might still get closed
+ * when it is idle or not referred anymore. Have a look at \a
+ * PJSIP_TRANSPORT_SERVER_IDLE_TIME
+ *
+ * Default: 0 (disabled)
+ */
+#ifndef PJSIP_TCP_INITIAL_TIMEOUT
+#   define PJSIP_TCP_INITIAL_TIMEOUT	    0
+#endif
 
 /**
  * Set the interval to send keep-alive packet for TLS transports.
@@ -789,12 +842,16 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * will slightly affect stack usage, since each entry will occupy about
  * 32 bytes of stack memory.
  *
- * Default: 8
+ * Default: 16 (or 32 if IPv6 support is enabled)
  *
  * @see PJSIP_HAS_RESOLVER
  */
 #ifndef PJSIP_MAX_RESOLVED_ADDRESSES
-#   define PJSIP_MAX_RESOLVED_ADDRESSES	    8
+#   if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
+#       define PJSIP_MAX_RESOLVED_ADDRESSES	    32
+#   else
+#       define PJSIP_MAX_RESOLVED_ADDRESSES	    16
+#   endif
 #endif
 
 
@@ -824,7 +881,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 /**
  * Specify whether TLS listener should use SO_REUSEADDR option.
  *
- * Default is FALSE on Windows and TRUE on non-Windows.
+ * Default is 0 on Windows and 1 on non-Windows.
  *
  * @see PJSIP_TCP_TRANSPORT_REUSEADDR
  */
@@ -837,9 +894,17 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #endif
 
 
-/* Endpoint. */
-#define PJSIP_MAX_TIMER_COUNT		(2*pjsip_cfg()->tsx.max_count + \
+/**
+ * Specify the maximum number of timer entries initially allocated by
+ * endpoint. If the application registers more entries during runtime,
+ * then the timer will automatically resize.
+ *
+ * Default: (2*pjsip_cfg()->tsx.max_count) + (2*PJSIP_MAX_DIALOG_COUNT)
+ */
+#ifndef PJSIP_MAX_TIMER_COUNT
+#   define PJSIP_MAX_TIMER_COUNT	(2*pjsip_cfg()->tsx.max_count + \
 					 2*PJSIP_MAX_DIALOG_COUNT)
+#endif
 
 /**
  * Initial memory block for the endpoint.
@@ -1133,6 +1198,20 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_AUTH_CACHED_POOL_MAX_SIZE	(20 * 1024)
 #endif
 
+
+/**
+ * Specify whether the cnonce used for SIP authentication contain digits only.
+ * The "cnonce" value is setup using GUID generator, i.e:
+ * pj_create_unique_string(), and the GUID string may contain hyphen character
+ * ("-"). Some SIP servers do not like this GUID format, so this option will
+ * strip any hyphens from the GUID string.
+ *
+ * Default is 1 (cnonce will not contain any hyphen characters).
+ */
+#ifndef PJSIP_AUTH_CNONCE_USE_DIGITS_ONLY
+#   define PJSIP_AUTH_CNONCE_USE_DIGITS_ONLY	1
+#endif
+
 /*****************************************************************************
  *  SIP Event framework and presence settings.
  */
@@ -1238,6 +1317,18 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  */
 #ifndef PJSIP_SESS_TIMER_DEF_SE
 #   define PJSIP_SESS_TIMER_DEF_SE		1800
+#endif
+
+
+/**
+ * Default delay for retrying session refresh request upon
+ * receiving transport error (503). Set it to -1 to end the session
+ * immediately instead.
+ *
+ * Default: 10 seconds
+ */
+#ifndef PJSIP_SESS_TIMER_RETRY_DELAY
+#   define PJSIP_SESS_TIMER_RETRY_DELAY		10
 #endif
 
 
