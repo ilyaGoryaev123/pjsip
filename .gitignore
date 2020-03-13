@@ -1,6 +1,7 @@
 .DS_Store
-build/*
 .vscode/
+
+build/*
 
 # openh264
 !build/openh264
@@ -8,6 +9,24 @@ build/openh264/*
 
 !build/openh264/lib
 !build/openh264/lib/*
+
+# opus
+!build/opus
+build/opus/*
+
+!build/opus/dependencies
+build/opus/dependencies/*
+
+!build/opus/dependencies/lib
+!build/opus/dependencies/lib/*
+
+# openssl
+!build/openssl
+build/openssl/*
+
+!build/openssl/lib/
+!build/openssl/lib/*
+build/openssl/lib/.DS_Store
 
 # pjsip
 !build/pjproject
