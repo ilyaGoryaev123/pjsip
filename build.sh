@@ -4,6 +4,7 @@
 export OPENSSL_VERSION="1.1.1c" # specify the openssl version to use
 export PJSIP_VERSION="2.10"
 export OPUS_VERSION="1.3.1"
+export G729_VERSION="1.1.1"
 export MACOS_MIN_SDK_VERSION="10.12"
 export IOS_MIN_SDK_VERSION="9.0"
 
@@ -38,8 +39,16 @@ function openssl() {
     OPENSSL_ENABLED=1
 }
 
+# bcg729
+G729_DIR="${BUILD_DIR}/bcg729"
 G729_ENABLED=
-function enable_g729() {
+function bcg729() {
+    if [ ! -f "${G729_DIR}/lib/libbcg729.a" ] || [ ! -d "${G729_DIR}/include/bcg729/" ]; then
+        "${__DIR__}/bcg729.sh" "${G729_DIR}"
+    else
+        echo "Using BCG729..."
+    fi
+
     G729_ENABLED=1
 }
 
@@ -66,7 +75,7 @@ function pjsip() {
         ARGS+=("--with-opus" "${OPUS_DIR}/dependencies")
     fi
     if [[ G729_ENABLED ]]; then
-        ARGS+=("--enable-g729-codec")
+        ARGS+=("--with-g729" "${G729_DIR}")
     fi
     echo "${ARGS[@]}"
 
@@ -75,5 +84,5 @@ function pjsip() {
 
 openssl
 opus
-enable_g729
+bcg729
 pjsip

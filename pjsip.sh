@@ -24,7 +24,6 @@ IPHONESIMULATOR_SDK=$(xcrun --sdk iphonesimulator --show-sdk-path)
 OSX_DEPLOYMENT_VERSION=${MACOS_MIN_SDK_VERSION:-"10.12"}
 OSX_PLATFORM=$(xcrun --sdk macosx --show-sdk-platform-path)
 OSX_SDK=$(xcrun --sdk macosx --show-sdk-path)
-https://github.com/pjsip/pjproject/archive/${PJSIP_VERSION:-2.10}.tar.gz
 BASE_DIR="$1"
 PJSIP_URL="https://github.com/pjsip/pjproject/archive/${PJSIP_VERSION:-2.10}.tar.gz"
 PJSIP_DIR="$1/src"
@@ -60,20 +59,20 @@ while [ "$#" -gt 0 ]; do
                 exit 1
             fi
             ;;
-        --enable-g729-codec)
-            G729_ENABLED=1
-            shift 1
-            continue
-        ;;
+        --with-g729)
+						if [ "$#" -gt 1 ]; then
+                G729_PREFIX=$(python -c "import os,sys; print os.path.realpath(sys.argv[1])" "$2")
+                shift 2
+                continue
+            else
+                echo 'ERROR: Must specify a non-empty "--with-g729 PREFIX" argument.' >&2
+                exit 1
+            fi
+						;;
     esac
 
     shift
 done
-
-G729_DIR="${__DIR__}/support_g729"
-function g729() {
-    "${G729_DIR}/install.sh" "$1" "$2"
-}
 
 function configure() {
 	TYPE=$1
@@ -114,10 +113,6 @@ function configure() {
 		echo "#define PJMEDIA_HAS_VID_TOOLBOX_CODEC 1" >> "${PJSIP_CONFIG_PATH}"
 	fi
 
-    if [[ ${G729_ENABLED} ]]; then
-        echo "#define PJMEDIA_HAS_G729_CODEC 1" >> "${PJSIP_CONFIG_PATH}"
-    fi
-
 	echo "#define PJ_HAS_IPV6 1" >> "${PJSIP_CONFIG_PATH}" # Enable IPV6
 	echo "#include <pj/config_site_sample.h>" >> "${PJSIP_CONFIG_PATH}" # Include example config
 
@@ -150,8 +145,8 @@ function configure() {
 	if [[ ${OPUS_PREFIX} ]]; then
 		CONFIGURE="${CONFIGURE} --with-opus=${OPUS_PREFIX}"
 	fi
-    if [[ ${G729_ENABLED} ]]; then
-		CONFIGURE="${CONFIGURE} --enable-g729-codec"
+    if [[ ${G729_PREFIX} ]]; then
+		CONFIGURE="${CONFIGURE} --with-bcg729=${G729_PREFIX}"
 	fi
 
 	# flags
@@ -209,18 +204,18 @@ function clean_libs () {
 }
 
 function copy_libs () {
-    ARCH=${1}
+	ARCH=${1}
 	TYPE=${2}
 
-    for SRC_DIR in ${LIB_PATHS[*]}; do
-        SRC_DIR="${PJSIP_DIR}/${SRC_DIR}"
+	for SRC_DIR in ${LIB_PATHS[*]}; do
+		SRC_DIR="${PJSIP_DIR}/${SRC_DIR}"
 		DST_DIR="${SRC_DIR}-${TYPE}-${ARCH}"
-        if [ -d "${DST_DIR}" ]; then
-            rm -rf "${DST_DIR}"
-        fi
-        cp -R "${SRC_DIR}" "${DST_DIR}"
-        rm -rf "${SRC_DIR}"/* # delete files because this directory will be used for the final lipo output
-    done
+		if [ -d "${DST_DIR}" ]; then
+				rm -rf "${DST_DIR}"
+		fi
+		cp -R "${SRC_DIR}" "${DST_DIR}"
+		rm -rf "${SRC_DIR}"/* # delete files because this directory will be used for the final lipo output
+	done
 }
 
 function build () {
@@ -281,10 +276,6 @@ function do_lipo() {
 }
 
 download "${PJSIP_URL}" "${PJSIP_DIR}"
-
-if [[ G729_ENABLED ]]; then
-    g729 "${PJSIP_DIR}" "${PJSIP_VERSION}"
-fi
 
 patch_pjsip "${PJSIP_DIR}" "${__DIR__}"
 
