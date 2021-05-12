@@ -68,15 +68,6 @@ diff -ruN pjproject/pjsip/src/pjsua-lib/pjsua_acc.c ./pjsip/src/pjsua-lib/pjsua_
  
      dst->proxy_cnt = src->proxy_cnt;
      for (i=0; i<src->proxy_cnt; ++i)
-@@ -430,7 +431,7 @@
-     if (acc->pool)
- 	pj_pool_reset(acc->pool);
-     else
--	acc->pool = pjsua_pool_create("acc%p", 512, 256);
-+	acc->pool = pjsua_pool_create("acc%p", 1024, 256);
-
-     /* Copy config */
-     pjsua_acc_config_dup(acc->pool, &pjsua_var.acc[id].cfg, cfg);
 @@ -2399,7 +2400,9 @@
  			      &acc->cfg.id, 
  			      &acc->cfg.id,

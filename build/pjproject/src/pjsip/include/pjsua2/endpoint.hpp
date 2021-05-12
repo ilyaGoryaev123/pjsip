@@ -867,6 +867,14 @@ public:
     int			jbMax;
 
     /**
+     * Set the algorithm the jitter buffer uses to discard frames in order to
+     * adjust the latency.
+     *
+     * Default: PJMEDIA_JB_DISCARD_PROGRESSIVE
+     */
+    pjmedia_jb_discard_algo jbDiscardAlgo;
+
+    /**
      * Specify idle time of sound device before it is automatically closed,
      * in seconds. Use value -1 to disable the auto-close feature of sound
      * device
@@ -1787,6 +1795,8 @@ private:
                                     pjmedia_sdp_session *sdp,
                                     pj_pool_t *pool,
                                     const pjmedia_sdp_session *rem_sdp);
+    static void on_stream_precreate(pjsua_call_id call_id,
+                                    pjsua_on_stream_precreate_param *param);
     static void on_stream_created2(pjsua_call_id call_id,
 				   pjsua_on_stream_created_param *param);
     static void on_stream_destroyed(pjsua_call_id call_id,
@@ -1795,6 +1805,8 @@ private:
     static void on_dtmf_digit(pjsua_call_id call_id, int digit);
     static void on_dtmf_digit2(pjsua_call_id call_id, 
 			       const pjsua_dtmf_info *info);
+    static void on_dtmf_event(pjsua_call_id call_id,
+                              const pjsua_dtmf_event *event);
     static void on_call_transfer_request(pjsua_call_id call_id,
                                          const pj_str_t *dst,
                                          pjsip_status_code *code);

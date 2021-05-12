@@ -966,7 +966,8 @@ public:
     MediaPort *setNoDev();
 
     /**
-     * Set sound device mode.
+     * Set sound device mode. Note that calling the APIs to set sound device
+     * (setPlaybackDev()/setCaptureDev()) will reset the mode.
      * 
      * @param mode		The sound device mode, as bitmask combination 
      *				of #pjsua_snd_dev_mode
@@ -1987,6 +1988,8 @@ public:
 
 private:
     pjmedia_vid_dev_index devId;
+    pjsua_vid_win_id winId;
+    void updateDevId();
 };
 
 /**

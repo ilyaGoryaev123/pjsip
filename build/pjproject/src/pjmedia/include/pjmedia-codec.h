@@ -24,12 +24,12 @@
  * @file pjmedia-codec.h
  * @brief Include all codecs API in PJMEDIA-CODEC
  */
-
+#include <pjmedia-codec/and_aud_mediacodec.h>
+#include <pjmedia-codec/and_vid_mediacodec.h>
 #include <pjmedia-codec/audio_codecs.h>
 #include <pjmedia-codec/bcg729.h>
 #include <pjmedia-codec/ffmpeg_vid_codecs.h>
 #include <pjmedia-codec/g722.h>
-#include <pjmedia-codec/g729.h>
 #include <pjmedia-codec/g7221.h>
 #include <pjmedia-codec/gsm.h>
 #include <pjmedia-codec/ilbc.h>

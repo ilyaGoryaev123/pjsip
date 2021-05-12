@@ -145,10 +145,17 @@
 #endif
 
 /**
-* Unless specified otherwise, G.729 codec is not included by default.
-*/
-#ifndef PJMEDIA_HAS_G729_CODEC
-#   define PJMEDIA_HAS_G729_CODEC    0
+ * Initial memory block for G.722 codec implementation.
+ */
+#ifndef PJMEDIA_POOL_LEN_G722_CODEC
+#   define PJMEDIA_POOL_LEN_G722_CODEC  1000
+#endif
+
+/**
+ * Memory increment for G.722 codec implementation.
+ */
+#ifndef PJMEDIA_POOL_INC_G722_CODEC
+#   define PJMEDIA_POOL_INC_G722_CODEC  1000
 #endif
 
 /**
@@ -603,6 +610,75 @@
  */
 #ifndef PJMEDIA_HAS_VPX_CODEC_VP9
 #   define PJMEDIA_HAS_VPX_CODEC_VP9		0
+#endif
+
+/**
+ * Enable Android MediaCodec AMRNB codec.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_HAS_AND_MEDIA_AMRNB
+#   define PJMEDIA_HAS_AND_MEDIA_AMRNB		1
+#endif
+
+/**
+ * Enable Android MediaCodec AMRWB codec.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_HAS_AND_MEDIA_AMRWB
+#   define PJMEDIA_HAS_AND_MEDIA_AMRWB		1
+#endif
+
+/**
+ * Enable Android MediaCodec AVC/H264 codec.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_HAS_AND_MEDIA_H264
+#   define PJMEDIA_HAS_AND_MEDIA_H264		1
+#endif
+
+/**
+ * Enable Android MediaCodec VP8 codec.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_HAS_AND_MEDIA_VP8
+#   define PJMEDIA_HAS_AND_MEDIA_VP8		1
+#endif
+
+/**
+ * Enable Android MediaCodec VP9 codec.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_HAS_AND_MEDIA_VP9
+#   define PJMEDIA_HAS_AND_MEDIA_VP9		1
+#endif
+
+/**
+ * Prioritize to use software video encoder on Android MediaCodec.
+ * Set to 0 to prioritize Hardware encoder.
+ * Note: based on test, software encoder configuration provided the most stable
+ * configuration.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_AND_MEDIA_PRIO_SW_VID_ENC
+#    define PJMEDIA_AND_MEDIA_PRIO_SW_VID_ENC 	1
+#endif
+
+/**
+ * Prioritize to use software video encoder on Android MediaCodec.
+ * Set to 0 to prioritize Hardware encoder.
+ * Note: based on test, software decoder configuration provided the most stable
+ * configuration.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_AND_MEDIA_PRIO_SW_VID_DEC
+#    define PJMEDIA_AND_MEDIA_PRIO_SW_VID_DEC 	1
 #endif
 
 /**

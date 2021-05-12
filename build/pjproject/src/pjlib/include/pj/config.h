@@ -804,6 +804,19 @@
 #  define PJ_HAS_SEMAPHORE	    1
 #endif
 
+/**
+ * Use dispatch semaphores on Darwin.
+ *
+ * Default: 1 on Darwin, 0 otherwise
+ */
+#ifndef PJ_SEMAPHORE_USE_DISPATCH_SEM
+#   if defined(PJ_DARWINOS) && PJ_DARWINOS != 0
+#	define PJ_SEMAPHORE_USE_DISPATCH_SEM	1
+#   else
+#	define PJ_SEMAPHORE_USE_DISPATCH_SEM	0
+#   endif
+#endif
+
 
 /**
  * Event object (for synchronization, e.g. in Win32)
@@ -973,7 +986,11 @@
 #define PJ_SSL_SOCK_IMP_NONE 	    0	/**< Disable SSL socket.    */
 #define PJ_SSL_SOCK_IMP_OPENSSL	    1	/**< Using OpenSSL.	    */
 #define PJ_SSL_SOCK_IMP_GNUTLS      2	/**< Using GnuTLS.	    */
-
+#define PJ_SSL_SOCK_IMP_DARWIN      3	/**< Using Apple's Secure
+					     Transport (deprecated in
+					     MacOS 10.15 & iOS 13.0)*/
+#define PJ_SSL_SOCK_IMP_APPLE       4	/**< Using Apple's Network 
+					     framework.	    	    */
 
 /**
  * Select which SSL socket implementation to use. Currently pjlib supports
@@ -1022,6 +1039,18 @@
  */
 #ifndef PJ_SSL_SOCK_MAX_CURVES
 #  define PJ_SSL_SOCK_MAX_CURVES   32
+#endif
+
+/**
+ * Use OpenSSL thread locking callback. This is only applicable for OpenSSL
+ * version prior to 1.1.0
+ *
+ * Default: 1 (enabled)
+ */
+#ifndef PJ_SSL_SOCK_OSSL_USE_THREAD_CB
+#   define PJ_SSL_SOCK_OSSL_USE_THREAD_CB   1
+#else
+#   define PJ_SSL_SOCK_OSSL_USE_THREAD_CB   0
 #endif
 
 
@@ -1366,7 +1395,7 @@ PJ_BEGIN_DECL
 #define PJ_VERSION_NUM_MAJOR	2
 
 /** PJLIB version minor number. */
-#define PJ_VERSION_NUM_MINOR	10
+#define PJ_VERSION_NUM_MINOR	11
 
 /** PJLIB version revision number. */
 #define PJ_VERSION_NUM_REV      0
