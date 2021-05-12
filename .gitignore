@@ -28,6 +28,15 @@ build/openssl/*
 !build/openssl/lib/*
 build/openssl/lib/.DS_Store
 
+# bcg729
+!build/bcg729
+build/bcg729/*
+
+!build/bcg729/lib
+build/bcg729/lib/*
+
+!build/bcg729/lib/libbcg729.a
+
 # pjsip
 !build/pjproject
 build/pjproject/*
