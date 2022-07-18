@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name         = "pjsip"
-  s.version      = "2.11"
+  s.version      = "2.12.1"
   s.summary      = "pjsip for iOS"
   s.homepage     = "http://www.pjsip.org"
   s.author       = 'www.pjsip.org'
