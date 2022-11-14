@@ -166,6 +166,7 @@ function configure() {
 		fi
 	fi
 	export LDFLAGS="${LDFLAGS} -lstdc++"
+	export CFLAGS="${CFLAGS} -g"
 
 	# log
 	if [ -f "${LOG}" ]; then
