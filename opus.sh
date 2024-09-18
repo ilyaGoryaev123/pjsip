@@ -54,7 +54,7 @@ DEVELOPER=`xcode-select -print-path`
 
 # cd "`dirname \"$0\"`"
 # REPOROOT=$(pwd)
-REPOROOT=$(python -c "import os,sys; print os.path.realpath(sys.argv[1])" "$1")
+REPOROOT=$(python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "$1")
 
 # Where we'll end up storing things in the end
 OUTPUTDIR="${REPOROOT}/dependencies"

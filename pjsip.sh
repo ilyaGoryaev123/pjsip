@@ -41,7 +41,7 @@ while [ "$#" -gt 0 ]; do
     case $1 in
         --with-openssl)
             if [ "$#" -gt 1 ]; then
-                OPENSSL_PREFIX=$(python -c "import os,sys; print os.path.realpath(sys.argv[1])" "$2")
+                OPENSSL_PREFIX=$(python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "$2")
                 shift 2
                 continue
             else
@@ -51,7 +51,7 @@ while [ "$#" -gt 0 ]; do
             ;;
         --with-opus)
             if [ "$#" -gt 1 ]; then
-                OPUS_PREFIX=$(python -c "import os,sys; print os.path.realpath(sys.argv[1])" "$2")
+                OPUS_PREFIX=$(python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "$2")
                 shift 2
                 continue
             else
@@ -61,7 +61,7 @@ while [ "$#" -gt 0 ]; do
             ;;
         --with-g729)
 						if [ "$#" -gt 1 ]; then
-                G729_PREFIX=$(python -c "import os,sys; print os.path.realpath(sys.argv[1])" "$2")
+                G729_PREFIX=$(python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "$2")
                 shift 2
                 continue
             else
