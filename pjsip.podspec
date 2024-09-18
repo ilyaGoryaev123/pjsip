@@ -1,10 +1,10 @@
 Pod::Spec.new do |s|
   s.name         = "pjsip"
-  s.version      = "2.12.1"
+  s.version      = "2.14.1"
   s.summary      = "pjsip for iOS"
   s.homepage     = "http://www.pjsip.org"
   s.author       = 'www.pjsip.org'
-  s.source       = { :git => "https://github.com/VoiSmart/pjsip.git", :tag => "#{s.version}" }
+  s.source       = { :git => "https://github.com/ilyaGoryaev123/pjsip.git", :tag => "#{s.version}" }
   s.description  = <<-DESC
                       PJSIP is a free and open source multimedia communication library written in C language implementing standard based protocols such as SIP, SDP, RTP, STUN, TURN, and ICE. It combines signaling protocol (SIP) with rich multimedia framework and NAT traversal functionality into high level API that is portable and suitable for almost any type of systems ranging from desktops, embedded systems, to mobile handsets.
                       PJSIP is both compact and feature rich. It supports audio, video, presence, and instant messaging, and has extensive documentation. PJSIP is very portable. On mobile devices, it abstracts system dependent features and in many cases is able to utilize the native multimedia capabilities of the device.
