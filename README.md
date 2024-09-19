@@ -26,8 +26,9 @@ See [example](example/ipjsystest) folder for integration example
 ## Build manually
 
 1. Run `brew install nasm` to build openh264.
-1. Run [build.sh](build.sh).
-2. Drag generated libraries and headers files into your xcode project.
+2. Run `brew install cmake`
+3. Run [build.sh](build.sh).
+4. Drag generated libraries and headers files into your xcode project.
 
 ## Call for Pull Requests
 
