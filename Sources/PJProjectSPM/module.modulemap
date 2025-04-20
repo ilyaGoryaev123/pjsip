@@ -1,0 +1,7 @@
+module PJProject [system] {
+	umbrella "include"
+	
+	export *
+	link "pjproject"
+	requires objc
+}
